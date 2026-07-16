@@ -14,37 +14,47 @@
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
-    /* ★ タブバーのスタイル (タイトルバーとの一体化対応) ★ */
+    /* ★ タブバーのスタイル改善 ★ */
     .tab-bar {
       display: flex; background: #e8eaed; 
-      /* OSのタイトルバー領域を考慮したパディング（PWA WCO対応） */
       padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px));
-      border-bottom: 1px solid #ccc;
+      /* ボーダーの代わりに内側の影を使うことで、はみ出しカット問題を解決 */
+      box-shadow: inset 0 -1px 0 0 #ccc;
       align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none;
-      /* 余白をドラッグしてウィンドウを動かせるようにする */
       -webkit-app-region: drag;
     }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     
     .tab {
+      position: relative; /* インジケーターの基準 */
       display: flex; align-items: center; justify-content: space-between;
       min-width: 120px; max-width: 250px; 
-      padding: 6px 10px 7px 10px; margin-right: 2px; margin-bottom: -1px;
+      padding: 6px 10px 7px 10px; margin-right: 2px;
       background: #f3f3f3; 
-      border: 1px solid transparent; border-bottom: 1px solid transparent;
+      border: 1px solid transparent; border-bottom: none;
       border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default;
       transition: background 0.2s; white-space: nowrap; overflow: hidden;
-      /* タブ自身はドラッグで移動しない（クリック可能にする） */
       -webkit-app-region: no-drag;
     }
     .tab:hover { background: #e0e0e0; }
     .tab.active {
       background: #fff; color: #000; 
       border-color: #ccc; 
-      border-bottom: 1px solid #fff; 
-      z-index: 2; position: relative;
+      border-bottom: none; 
+      /* 下に1pxの白い影を落とすことで、親要素のグレーの線を完全にマスク（一体化）する */
+      box-shadow: 0 1px 0 0 #fff; 
+      z-index: 2;
     }
+
+    /* ★ ドラッグ＆ドロップ時の青いインジケーター ★ */
+    .tab.drag-over-left::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10;
+    }
+    .tab.drag-over-right::after {
+      content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10;
+    }
+
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close {
       margin-left: 8px; width: 16px; height: 16px; display: flex;
@@ -67,7 +77,6 @@
     .menu-item-btn { padding: 6px 12px; cursor: default; border-radius: 4px; }
     .menu-item-btn:hover, .menu-item-btn.active { background: #f0f0f0; }
     
-    /* ドロップダウンメニュー */
     .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); min-width: 250px; padding: 4px 0; }
     .dropdown.show { display: block; }
     .dropdown-item { padding: 6px 15px 6px 25px; display: flex; justify-content: space-between; align-items: center; cursor: default; position: relative; white-space: nowrap; font-size: var(--ui-font-size); color: #333; }
@@ -81,7 +90,6 @@
     .dropdown-item.disabled { color: #aaa; pointer-events: none; }
     .dropdown-item.disabled .shortcut { color: #ccc; }
 
-    /* エディタとステータスバー */
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
     .status-bar { background: #f9f9f9; border-top: 1px solid #ddd; padding: 4px 15px; font-size: var(--ui-font-size); display: flex; justify-content: space-between; color: #555; user-select: none; }
@@ -104,16 +112,10 @@
     .modal-buttons button { padding: 6px 24px; font-size: var(--ui-font-size); cursor: pointer; background: #e5e5e5; border: 1px solid #ccc; border-radius: 4px; color: #000; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* ★ 印刷時専用スタイル (GUIを消してテキストのみにする) ★ */
     @media print {
       body, html { height: auto; overflow: visible; background: #fff; }
       .tab-bar, .menu-bar, .status-bar, #editor, .modal-overlay { display: none !important; }
-      #print-area { 
-        display: block !important; 
-        font-family: 'Segoe UI', Meiryo, monospace; 
-        font-size: 11pt; color: #000; 
-        white-space: pre-wrap; word-wrap: break-word; 
-      }
+      #print-area { display: block !important; font-family: 'Segoe UI', Meiryo, monospace; font-size: 11pt; color: #000; white-space: pre-wrap; word-wrap: break-word; }
     }
     #print-area { display: none; }
   </style>
@@ -150,11 +152,9 @@
         <div class="dropdown-item" onclick="menuAction('open')"><span>開く(O)...</span><span class="shortcut">Ctrl+O</span></div>
         <div class="dropdown-item" id="menu-save" onclick="menuAction('save')"><span id="menu-save-text">保存(S)</span><span class="shortcut">Ctrl+S</span></div>
         <div class="dropdown-item" onclick="menuAction('saveAs')"><span>名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
-        
         <div class="dropdown-divider"></div>
         <div id="recent-files-container"></div>
         <div class="dropdown-divider"></div>
-        
         <div class="dropdown-item" onclick="printContent()"><span>印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
         <div class="dropdown-divider"></div>
         <div class="dropdown-item" onclick="window.close()"><span>終了(X)</span></div>
@@ -204,7 +204,6 @@
     </div>
   </div>
 
-  <!-- 複数ファイルの選択を許可するよう multiple 属性を追加 -->
   <input type="file" id="fileInputFallback" onchange="handleFileSelectFallback(event)" multiple>
   <div id="editor"></div>
   
@@ -241,7 +240,7 @@
     editor.setFontSize(currentFontSize);
 
     // ==========================================
-    // タブ管理システム
+    // タブ管理・ドラッグ＆ドロップ（分離対応）
     // ==========================================
     let tabs = [];
     let activeTabId = null;
@@ -286,16 +285,14 @@
       editor.focus();
     }
 
-    function closeTab(id, event) {
+    function closeTab(id, event, force = false) {
       if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id);
       if (tabIndex === -1) return;
       
       const tab = tabs[tabIndex];
-      if (tab.isDirty) {
-        if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) {
-          return;
-        }
+      if (!force && tab.isDirty) {
+        if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) return;
       }
 
       tabs.splice(tabIndex, 1);
@@ -316,6 +313,27 @@
       return tabs.find(t => t.id === activeTabId);
     }
 
+    // ★ ウィンドウ外へのドロップ（ティアオフ）処理 ★
+    function tearOffTab(id) {
+      const tab = tabs.find(t => t.id === id);
+      if (!tab) return;
+      
+      // 新しいウィンドウに渡すデータを一時保存
+      const transferData = {
+        filename: tab.filename,
+        content: tab.session.getValue(),
+        encoding: tab.encoding,
+        isDirty: tab.isDirty
+      };
+      localStorage.setItem('tearOffTransfer', JSON.stringify(transferData));
+      
+      // 新しいウィンドウ（またはタブ）を開く
+      window.open(window.location.href, '_blank', 'width=800,height=600');
+      
+      // 元のウィンドウからは強制的に削除
+      closeTab(id, null, true);
+    }
+
     function renderTabs() {
       const tabBar = document.getElementById('tab-bar');
       Array.from(tabBar.children).forEach(child => {
@@ -333,22 +351,50 @@
           e.dataTransfer.setData('text/plain', tab.id);
           setTimeout(() => tabEl.style.opacity = '0.5', 0);
         };
+        
+        // ★ 青い縦バーの表示判定 ★
         tabEl.ondragover = (e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
+          if (draggedTabId && draggedTabId !== tab.id) {
+            const rect = tabEl.getBoundingClientRect();
+            const isLeft = (e.clientX - rect.left) < (rect.width / 2);
+            tabEl.classList.toggle('drag-over-left', isLeft);
+            tabEl.classList.toggle('drag-over-right', !isLeft);
+          }
         };
+        tabEl.ondragleave = () => {
+          tabEl.classList.remove('drag-over-left', 'drag-over-right');
+        };
+        
         tabEl.ondrop = (e) => {
           e.preventDefault();
+          tabEl.classList.remove('drag-over-left', 'drag-over-right');
           if (draggedTabId && draggedTabId !== tab.id) {
             const fromIndex = tabs.findIndex(t => t.id === draggedTabId);
-            const toIndex = tabs.findIndex(t => t.id === tab.id);
+            const rect = tabEl.getBoundingClientRect();
+            const isLeft = (e.clientX - rect.left) < (rect.width / 2);
+            
             const movedTab = tabs.splice(fromIndex, 1)[0];
+            
+            let toIndex = tabs.findIndex(t => t.id === tab.id);
+            if (!isLeft) toIndex++; // 右半分なら後ろに挿入
+            
             tabs.splice(toIndex, 0, movedTab);
             renderTabs();
           }
         };
-        tabEl.ondragend = () => {
+        
+        // ★ ドラッグ終了時のウィンドウ外ドロップ判定 ★
+        tabEl.ondragend = (e) => {
           tabEl.style.opacity = '1';
+          tabEl.classList.remove('drag-over-left', 'drag-over-right');
+          if (draggedTabId) {
+            // マウスの座標がウィンドウの外（マイナス、または幅/高さ以上）の場合は外へのドロップとみなす
+            if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) {
+              tearOffTab(tab.id);
+            }
+          }
           draggedTabId = null;
         };
         
@@ -369,9 +415,6 @@
       });
     }
 
-    // ==========================================
-    // 最近使用したファイルの履歴管理（IndexedDB）
-    // ==========================================
     let db = null;
 
     function initDB() {
@@ -490,9 +533,6 @@
       });
     }
 
-    // ==========================================
-    // アクション・メニュー制御
-    // ==========================================
     function showAboutModal() {
       closeMenus();
       document.getElementById('aboutModal').style.display = 'flex';
@@ -577,7 +617,6 @@
       }
     }
 
-    // ★ 複数ファイルを選択して開けるよう multiple に対応 ★
     async function openFileWithAPI() {
       if (window.showOpenFilePicker) {
         try {
@@ -593,7 +632,6 @@
       }
     }
 
-    // ★ ドラッグ＆ドロップで複数ファイルを開けるようにループ化 ★
     window.addEventListener('dragover', e => e.preventDefault());
     window.addEventListener('drop', async e => {
       e.preventDefault();
@@ -619,7 +657,6 @@
       }
     });
 
-    // 複数ファイルのフォールバック
     function handleFileSelectFallback(e) {
       const files = e.target.files;
       if (!files) return;
@@ -753,7 +790,6 @@
       updateTitleAndStatus();
     }
 
-    // ★ 印刷の中身のみ表示する関数を追加 ★
     function printContent() {
       closeMenus();
       const tab = getActiveTab();
@@ -765,11 +801,9 @@
         printDiv.id = 'print-area';
         document.body.appendChild(printDiv);
       }
-      // 折り返しの設定に合わせて印刷にも反映
       printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre";
       printDiv.innerText = tab.session.getValue();
       
-      // ブラウザの印刷ダイアログを起動
       window.print();
     }
 
@@ -861,11 +895,32 @@
       });
     }
 
+    // ★ 起動時にティアオフ（分離）されたデータを受け取る処理 ★
+    const tearOffData = localStorage.getItem('tearOffTransfer');
+    if (tearOffData) {
+      localStorage.removeItem('tearOffTransfer');
+      try {
+        const data = JSON.parse(tearOffData);
+        // 分離されたタブを復元（ファイルハンドルはセキュリティ上渡せないので内容は未保存扱いになります）
+        createTab(data.filename, data.content, data.encoding, null, null);
+        setTimeout(() => {
+          const tab = getActiveTab();
+          if (tab) {
+            tab.isDirty = data.isDirty;
+            updateTitleAndStatus();
+            renderTabs();
+          }
+        }, 50);
+      } catch (e) {
+        createTab();
+      }
+    } else {
+      createTab();
+    }
+
     initDB().then(() => {
       updateRecentMenu();
     });
-    
-    createTab();
   </script>
 </body>
 </html>
