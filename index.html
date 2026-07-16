@@ -136,7 +136,6 @@
 </head>
 <body>
 
-  <!-- バージョン情報 -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -146,7 +145,6 @@
     </div>
   </div>
 
-  <!-- インストール促進 -->
   <div id="installModal" class="modal-overlay">
     <div class="modal-content">
       <h3>アプリのインストール</h3>
@@ -311,7 +309,6 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // ★ループの原因となる ?v=Date.now() を完全に削除 ★
         navigator.serviceWorker.register('./sw.js');
       });
     }
@@ -354,7 +351,6 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
-    // Aceエディタ内部の検索機能を削除
     if (editor.commands.commands.find) editor.commands.removeCommand('find');
     if (editor.commands.commands.replace) editor.commands.removeCommand('replace');
     
@@ -363,7 +359,6 @@
     editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
     editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
 
-    // グローバルなキーボードキャプチャ（ブラウザ標準機能の完全ブロック）
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
         const key = (e.key || '').toLowerCase();
@@ -486,7 +481,10 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) removeDraggedTabsLocally();
+      // 別ウィンドウがタブを受け取った場合、元のタブを削除
+      if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
+          removeDraggedTabsLocally();
+      }
     };
 
     function removeDraggedTabsLocally() {
@@ -555,39 +553,53 @@
           
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
+          // ChromeOSの他ウィンドウ間でデータを渡すために汎用テキストもセット
           e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
 
-          // タブの内容を含んだゴーストイメージ
+          // ★ 美しいドラッグ中のゴーストイメージ（プレビュー） ★
           const ghost = document.createElement('div');
-          ghost.style.position = 'absolute'; ghost.style.top = '-1000px'; ghost.style.background = '#fff';
-          ghost.style.border = '1px solid #ccc'; ghost.style.boxShadow = '2px 2px 10px rgba(0,0,0,0.2)';
-          ghost.style.padding = '10px'; ghost.style.fontFamily = 'Meiryo, sans-serif'; ghost.style.fontSize = '12px';
-          ghost.style.color = '#333'; ghost.style.width = '240px'; ghost.style.maxHeight = '120px';
-          ghost.style.overflow = 'hidden'; ghost.style.zIndex = '9999'; ghost.style.borderRadius = '4px';
+          ghost.id = 'drag-ghost-' + currentDragTransferId;
+          ghost.style.position = 'absolute'; ghost.style.top = '-10000px'; ghost.style.left = '-10000px';
+          ghost.style.background = '#ffffff'; ghost.style.border = '1px solid #0078d7';
+          ghost.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; ghost.style.padding = '8px 12px';
+          ghost.style.fontFamily = 'Meiryo, sans-serif'; ghost.style.fontSize = '12px'; ghost.style.color = '#333';
+          ghost.style.width = '240px'; ghost.style.maxHeight = '120px'; ghost.style.overflow = 'hidden';
+          ghost.style.borderRadius = '6px'; ghost.style.zIndex = '9999';
+          
           const title = document.createElement('div'); title.style.fontWeight = 'bold'; title.style.marginBottom = '6px';
-          title.style.borderBottom = '1px solid #eee'; title.style.paddingBottom = '4px';
-          title.innerText = transferringTabIds.length > 1 ? `${transferringTabIds.length} 個のタブ` : tab.filename;
-          const content = document.createElement('div'); content.style.whiteSpace = 'pre-wrap'; content.style.opacity = '0.7';
-          content.innerText = tab.session.getValue().substring(0, 150) + '...';
-          ghost.appendChild(title); ghost.appendChild(content); document.body.appendChild(ghost);
+          title.style.borderBottom = '1px solid #eee'; title.style.paddingBottom = '4px'; title.style.color = '#0067c0';
+          title.innerText = transferringTabIds.length > 1 ? `${transferringTabIds.length} 個のタブを移動中...` : tab.filename;
+          
+          const contentPreview = document.createElement('div'); contentPreview.style.whiteSpace = 'pre-wrap'; contentPreview.style.opacity = '0.8';
+          contentPreview.innerText = tab.session.getValue().substring(0, 100) + '...';
+          
+          ghost.appendChild(title); ghost.appendChild(contentPreview); document.body.appendChild(ghost);
           e.dataTransfer.setDragImage(ghost, 20, 20);
 
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
           await saveTransferData(currentDragTransferId, payload);
-          setTimeout(() => { document.body.removeChild(ghost); document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
+          setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
         tabEl.ondragover = (e) => {
           e.preventDefault(); e.stopPropagation(); document.getElementById('tab-bar').classList.remove('drag-over-empty'); e.dataTransfer.dropEffect = "move";
-          if (e.dataTransfer.types.length > 0) {
+          if (e.dataTransfer.types.includes('application/x-notepad-tabs') || e.dataTransfer.types.includes('text/plain')) {
              if (selectedTabs.has(tab.id)) return; const rect = tabEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); tabEl.classList.toggle('drag-over-left', isLeft); tabEl.classList.toggle('drag-over-right', !isLeft);
           }
         };
         tabEl.ondragleave = () => tabEl.classList.remove('drag-over-left', 'drag-over-right');
         tabEl.ondrop = (e) => handleTabDrop(e, tabEl, tab.id);
         tabEl.ondragend = (e) => {
+          const ghost = document.getElementById('drag-ghost-' + currentDragTransferId);
+          if (ghost) document.body.removeChild(ghost);
+
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
-          if (currentDragTransferId) { if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) { if (e.dataTransfer.dropEffect === 'none') { window.open('?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600'); removeDraggedTabsLocally(); } } }
+          if (currentDragTransferId) {
+             if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) {
+                 window.open('?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600');
+                 // ここでは消さず、新しいウィンドウがロードを完了してメッセージを返してくるのを待つ
+             }
+          }
           draggedTabId = null; 
         };
         
@@ -605,7 +617,9 @@
     const tabBar = document.getElementById('tab-bar');
     tabBar.ondragover = (e) => { 
         e.preventDefault(); 
-        if (e.dataTransfer.types.length > 0) { tabBar.classList.add('drag-over-empty'); }
+        if (e.dataTransfer.types.includes('application/x-notepad-tabs') || e.dataTransfer.types.includes('text/plain') || e.dataTransfer.types.includes('Files')) {
+            tabBar.classList.add('drag-over-empty'); 
+        }
     };
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
@@ -614,13 +628,21 @@
 
     async function handleTabDrop(e, targetEl, targetTabId) {
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
+      
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
-      if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
+      if (!transferId) {
+          const txt = e.dataTransfer.getData('text/plain');
+          if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1];
+      }
       
       if (transferId && transferId !== currentDragTransferId) {
+        // 他のウィンドウからタブをインポート
         const payload = await getTransferData(transferId);
         if (payload && Array.isArray(payload)) {
+          // 元のウィンドウに受信完了を通知
+          bc.postMessage({ type: 'tabs-adopted', transferId });
           await deleteTransferData(transferId);
+          
           if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
           
           let toIndex = tabs.length;
@@ -632,9 +654,10 @@
             const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
             selectedTabs.add(id); lastCreatedId = id;
           });
-          renderTabs(); if (lastCreatedId) switchTab(lastCreatedId); bc.postMessage({ type: 'tabs-adopted', transferId });
+          renderTabs(); if (lastCreatedId) switchTab(lastCreatedId); 
         }
       } else if (transferringTabIds.length > 0) {
+        // 同一ウィンドウ内の並び替え
         let toIndex = tabs.length;
         if (targetEl && targetTabId) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); }
         const movedTabs = []; transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); tabs[idx] = null; } });
@@ -642,6 +665,7 @@
         if (targetTabId) { toIndex = tabs.findIndex(t => t.id === targetTabId) + (targetEl.classList.contains('drag-over-right') ? 1 : 0); if(toIndex === -1) toIndex = tabs.length; }
         tabs.splice(toIndex, 0, ...movedTabs); renderTabs();
       } else {
+        // OSからのファイルドロップ
         const items = e.dataTransfer.items; if (!items) return;
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
@@ -653,7 +677,7 @@
     }
 
     // ==========================================
-    // データベース管理 (IndexedDB)
+    // データベース・ストレージ管理 (強力な二段構え)
     // ==========================================
     let db = null;
     function initDB() {
@@ -667,9 +691,46 @@
         request.onsuccess = (e) => { db = e.target.result; resolve(); }; request.onerror = () => { resolve(); };
       });
     }
-    function saveTransferData(id, data) { return new Promise(resolve => { const tx = db.transaction('transfers', 'readwrite'); tx.objectStore('transfers').put(data, id); tx.oncomplete = () => resolve(); }); }
-    function getTransferData(id) { return new Promise(resolve => { const tx = db.transaction('transfers', 'readonly'); const req = tx.objectStore('transfers').get(id); req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); }); }
-    function deleteTransferData(id) { return new Promise(resolve => { const tx = db.transaction('transfers', 'readwrite'); tx.objectStore('transfers').delete(id); tx.oncomplete = () => resolve(); }); }
+
+    // 転送データの確実な受け渡しのため、localStorageとIndexedDBの両方を使用
+    function saveTransferData(id, data) { 
+      try {
+        const safeData = data.map(d => ({...d, handle: null}));
+        localStorage.setItem('transfer_' + id, JSON.stringify(safeData));
+      } catch(e) {}
+      
+      return new Promise(resolve => { 
+        if (!db) return resolve();
+        const tx = db.transaction('transfers', 'readwrite'); 
+        tx.objectStore('transfers').put(data, id); 
+        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
+      }); 
+    }
+
+    function getTransferData(id) { 
+      return new Promise(resolve => { 
+        if (!db) return resolve(null);
+        const tx = db.transaction('transfers', 'readonly'); 
+        const req = tx.objectStore('transfers').get(id); 
+        req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); 
+      }).then(data => {
+        if (data) return data;
+        const local = localStorage.getItem('transfer_' + id);
+        if (local) { try { return JSON.parse(local); } catch(e) {} }
+        return null;
+      }); 
+    }
+
+    function deleteTransferData(id) { 
+      localStorage.removeItem('transfer_' + id);
+      return new Promise(resolve => { 
+        if (!db) return resolve();
+        const tx = db.transaction('transfers', 'readwrite'); 
+        tx.objectStore('transfers').delete(id); 
+        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
+      }); 
+    }
+
     function getRecentFiles() { return new Promise((resolve) => { if (!db) return resolve([]); const tx = db.transaction('settings', 'readonly'); const req = tx.objectStore('settings').get('recentFiles'); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
     function saveRecentFiles(files) { return new Promise((resolve) => { if (!db) return resolve(); const tx = db.transaction('settings', 'readwrite'); tx.objectStore('settings').put(files, 'recentFiles'); tx.oncomplete = () => resolve(); }); }
 
@@ -818,9 +879,18 @@
       initDB().then(async () => {
         const payload = await getTransferData(urlTransferId);
         if (payload && Array.isArray(payload)) {
-          await deleteTransferData(urlTransferId); selectedTabs.clear(); if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+          // ★ 新しいウィンドウがデータを読み取ったら、元のウィンドウに受信完了を通知 ★
+          bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId });
+          await deleteTransferData(urlTransferId); 
+          selectedTabs.clear(); 
+          
+          if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+          
           let lastId = null; payload.forEach(data => { const id = createTab(data.filename, data.content, data.encoding, data.handle); const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true; selectedTabs.add(id); lastId = id; });
-          updateTitleAndStatus(); renderTabs(); if(lastId) switchTab(lastId); window.history.replaceState({}, document.title, window.location.pathname);
+          updateTitleAndStatus(); renderTabs(); if(lastId) switchTab(lastId); 
+          
+          // 履歴に残らないようURLをクリーンに
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else { createTab(); }
         updateRecentMenu();
       });
