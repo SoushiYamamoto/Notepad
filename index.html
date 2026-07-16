@@ -233,13 +233,23 @@
     // ==========================================
     // 連携用 BroadcastChannel (ウィンドウ間通信)
     // ==========================================
+    let currentDragTransferId = null; // 別ウィンドウへ渡すためのID
+    let transferringTabId = null; // BroadcastChannel通信用に「どのタブを消すか」を保持する変数
+
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      // 別のウィンドウがこのタブを正常に受け取った場合、こちらのタブを消す
+      // 他のウィンドウが受け取った（adopted）という連絡が来たら、元のウィンドウのタブを消す
       if (event.data.type === 'tab-adopted' && event.data.transferId === currentDragTransferId) {
         removeDraggedTabLocally();
       }
     };
+
+    function removeDraggedTabLocally() {
+      if (!transferringTabId) return;
+      closeTab(transferringTabId, null, true);
+      transferringTabId = null;
+      currentDragTransferId = null;
+    }
 
     // ==========================================
     // タブ管理・ドラッグ＆ドロップ（分離・結合対応）
@@ -247,9 +257,7 @@
     let tabs = [];
     let activeTabId = null;
     let tabIdCounter = 0;
-    
     let draggedTabId = null;
-    let currentDragTransferId = null; // 別ウィンドウへ渡すためのID
 
     function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null) {
       const id = 'tab_' + (++tabIdCounter);
@@ -303,7 +311,8 @@
 
       if (tabs.length === 0) {
         window.close();
-        setTimeout(() => { if (tabs.length === 0) createTab(); }, 50); // window.closeが効かない場合のフォールバック
+        // window.close() がブラウザ仕様でブロックされた場合は空タブを作る
+        setTimeout(() => { if (tabs.length === 0) createTab(); }, 50);
       } else {
         if (activeTabId === id) {
           const nextIndex = Math.max(0, tabIndex - 1);
@@ -316,13 +325,6 @@
 
     function getActiveTab() {
       return tabs.find(t => t.id === activeTabId);
-    }
-
-    function removeDraggedTabLocally() {
-      if (!draggedTabId) return;
-      closeTab(draggedTabId, null, true);
-      draggedTabId = null;
-      currentDragTransferId = null;
     }
 
     function renderTabs() {
@@ -338,12 +340,12 @@
         tabEl.draggable = true;
         tabEl.ondragstart = async (e) => {
           draggedTabId = tab.id;
+          transferringTabId = tab.id; // 送信用にIDを保持
           currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData('application/x-notepad-tab', currentDragTransferId);
           
-          // 別ウィンドウでもファイルハンドルを使えるよう IndexedDB に保存
           await saveTransferData(currentDragTransferId, {
             filename: tab.filename,
             content: tab.session.getValue(),
@@ -359,9 +361,8 @@
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
           
-          // ウィンドウ内外問わずタブドロップの判定
           if (e.dataTransfer.types.includes('application/x-notepad-tab')) {
-             if (draggedTabId && draggedTabId === tab.id) return; // 自分自身
+             if (draggedTabId && draggedTabId === tab.id) return; 
              const rect = tabEl.getBoundingClientRect();
              const isLeft = (e.clientX - rect.left) < (rect.width / 2);
              tabEl.classList.toggle('drag-over-left', isLeft);
@@ -371,13 +372,15 @@
         
         tabEl.ondragleave = () => tabEl.classList.remove('drag-over-left', 'drag-over-right');
         
+        // ★ 個別のタブへのドロップ処理 ★
         tabEl.ondrop = async (e) => {
           e.preventDefault();
+          e.stopPropagation(); // 他のドロップイベント（余白用）を止める！重複生成の防止
           tabEl.classList.remove('drag-over-left', 'drag-over-right');
           const transferId = e.dataTransfer.getData('application/x-notepad-tab');
           
           if (transferId && transferId !== currentDragTransferId) {
-            // ★ 他のウィンドウからタブがドロップされた（結合） ★
+            // 他ウィンドウからのタブ挿入
             const data = await getTransferData(transferId);
             if (data) {
               await deleteTransferData(transferId);
@@ -390,19 +393,16 @@
               const newTab = tabs.find(t => t.id === id);
               if (data.isDirty && newTab) newTab.isDirty = true;
               
-              // 末尾に作成されたタブを指定位置へ移動
               const createdIndex = tabs.findIndex(t => t.id === id);
               const movedTab = tabs.splice(createdIndex, 1)[0];
               tabs.splice(toIndex, 0, movedTab);
               
               renderTabs();
               switchTab(id);
-              
-              // 元のウィンドウに「受け取ったから消していいよ」と連絡
               bc.postMessage({ type: 'tab-adopted', transferId });
             }
           } else if (draggedTabId && draggedTabId !== tab.id) {
-            // ★ 同じウィンドウ内での並び替え ★
+            // 同一ウィンドウ内での並び替え
             const fromIndex = tabs.findIndex(t => t.id === draggedTabId);
             const rect = tabEl.getBoundingClientRect();
             const isLeft = (e.clientX - rect.left) < (rect.width / 2);
@@ -420,7 +420,6 @@
           tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
           if (currentDragTransferId) {
-            // マウスの座標がウィンドウの外なら、新しいウィンドウを作成（分離）
             if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) {
               if (e.dataTransfer.dropEffect === 'none') {
                  window.open('?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600');
@@ -428,7 +427,7 @@
               }
             }
           }
-          draggedTabId = null;
+          draggedTabId = null; 
         };
         
         tabEl.onclick = () => switchTab(tab.id);
@@ -470,7 +469,6 @@
       });
     }
 
-    // --- タブ転送用ヘルパー ---
     function saveTransferData(id, data) {
       return new Promise(resolve => {
          const tx = db.transaction('transfers', 'readwrite');
@@ -494,7 +492,6 @@
        });
     }
 
-    // --- 最近のファイル ---
     function getRecentFiles() {
       return new Promise((resolve) => {
         if (!db) return resolve([]);
@@ -597,9 +594,6 @@
       });
     }
 
-    // ==========================================
-    // アクション・メニュー制御
-    // ==========================================
     function showAboutModal() {
       closeMenus();
       document.getElementById('aboutModal').style.display = 'flex';
@@ -699,14 +693,14 @@
       }
     }
 
-    // エディタ領域へのファイルおよび別ウィンドウタブのドロップ対応
+    // ★ ウィンドウの余白（エディタなど）へのドロップ処理 ★
     window.addEventListener('dragover', e => e.preventDefault());
     window.addEventListener('drop', async e => {
       e.preventDefault();
       
       const transferId = e.dataTransfer.getData('application/x-notepad-tab');
       if (transferId && transferId !== currentDragTransferId) {
-          // 他のウィンドウからのタブドロップ
+          // 他ウィンドウから、タブ以外の余白領域へのドロップ（末尾に追加）
           const data = await getTransferData(transferId);
           if(data) {
               await deleteTransferData(transferId);
@@ -714,14 +708,16 @@
               const newTab = tabs.find(t=>t.id===id);
               if(data.isDirty && newTab) newTab.isDirty = true;
               updateTitleAndStatus();
+              renderTabs();
+              switchTab(id);
               bc.postMessage({ type: 'tab-adopted', transferId });
           }
           return;
       }
 
+      // 通常のファイルドロップ処理
       const items = e.dataTransfer.items;
       if (!items) return;
-      
       for (let i = 0; i < items.length; i++) {
         if (items[i].kind === 'file') {
           if (typeof items[i].getAsFileSystemHandle === 'function') {
@@ -963,16 +959,10 @@
       if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
     });
 
-    // ==========================================
-    // 起動時の初期化ロジック
-    // ==========================================
-    
-    // PWA関連付け「既存ウィンドウで開く」対応
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
         
-        // 最初にある「無題」の空タブを消す
         if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") {
             tabs.pop();
         }
@@ -987,7 +977,6 @@
       });
     }
 
-    // ティアオフ（分離）からのデータ復元
     const urlParams = new URLSearchParams(window.location.search);
     const transferId = urlParams.get('transfer');
 
@@ -1003,7 +992,6 @@
              updateTitleAndStatus();
              renderTabs();
           }
-          // URLをクリーンにする
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           createTab();
@@ -1014,7 +1002,6 @@
       initDB().then(() => {
         updateRecentMenu();
       });
-      // 起動時にデフォルトのタブを1つ生成（launchQueueで処理された場合は上書きされる）
       createTab();
     }
   </script>
