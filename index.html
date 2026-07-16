@@ -23,7 +23,6 @@
     .tab:hover { background: #e0e0e0; }
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
-
     .tab.drag-over-left::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; }
     .tab.drag-over-right::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; }
 
@@ -61,6 +60,7 @@
     
     #fileInputFallback { display: none; }
 
+    /* モーダル群 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2400; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-buttons { text-align: right; margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
@@ -68,26 +68,25 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* ダイアログはみ出し対策 CSS徹底強化 */
+    /* ★ 検索ダイアログ - はみ出し完全防止レイアウト ★ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
-      font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
-      user-select: none; width: 480px; max-width: 98vw; border-radius: 2px; box-sizing: border-box; margin: 0;
+      font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 15px; color: #000;
+      user-select: none; width: 480px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0;
     }
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
-    .win-dialog-content { display: flex; gap: 10px; width: 100%; box-sizing: border-box; }
-    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 250px; }
+    .win-dialog-content { display: flex; flex-direction: row; gap: 15px; width: 100%; box-sizing: border-box; }
+    .win-dialog-left { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
     .win-dialog-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .win-dialog-label { width: 130px; min-width: 130px; white-space: nowrap; display: inline-block; text-align: left; }
-    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; width: 100%; }
+    .win-dialog-label { width: 130px; min-width: 130px; white-space: nowrap; }
+    .win-dialog-input { flex: 1; padding: 4px 6px; border: 1px solid #7a7a7a; font-size: 12px; outline: none; box-sizing: border-box; width: 100%; }
     .win-dialog-input:focus { border-color: #0078d7; }
-    
-    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 120px; min-width: 120px; flex-shrink: 0; }
-    .win-dialog-btn { padding: 4px 6px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; overflow: hidden; }
+    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 110px; min-width: 110px; flex-shrink: 0; }
+    .win-dialog-btn { padding: 5px 8px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
-    .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px; align-items: center; }
+    .win-dialog-group { border: 1px solid #d0d0d0; padding: 10px; position: relative; margin-top: 5px; display: flex; gap: 15px; align-items: center; }
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
 
     @media print {
@@ -142,7 +141,7 @@
           <span class="win-dialog-label">検索する文字列(N):</span>
           <input type="text" id="winFindInput" class="win-dialog-input">
         </div>
-        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px; gap: 5px;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 15px; gap: 5px;">
           <label style="margin-bottom: 5px; white-space: nowrap;"><input type="checkbox" id="winFindMatchCase"> 大文字と小文字を区別(C)</label>
           <div class="win-dialog-group">
             <span class="win-dialog-group-title">検索方向</span>
@@ -271,8 +270,6 @@
   </div>
 
   <script>
-    console.log('[DEBUG] App Initialized.');
-
     let deferredPrompt;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
@@ -281,8 +278,7 @@
       e.preventDefault(); deferredPrompt = e;
       document.getElementById('menu-install-btn').style.display = 'flex';
       if (!localStorage.getItem('installPromptShown')) {
-        document.getElementById('installModal').style.display = 'flex';
-        localStorage.setItem('installPromptShown', 'true');
+        document.getElementById('installModal').style.display = 'flex'; localStorage.setItem('installPromptShown', 'true');
       }
     });
     function installApp() {
@@ -322,7 +318,7 @@
     editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
     editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
 
-    // ブラウザ標準検索等を強力にブロック
+    // Ctrl+F 等のブラウザ標準機能を強力にブロック
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
         const keyStr = (e.key || '').toLowerCase();
@@ -375,41 +371,38 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      console.log('[DEBUG] BC Message received:', event.data);
+      // 受信側ウィンドウから「完了」の合図が来たら、こちらのタブを消去
       if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
-        console.log('[DEBUG] Adopted signal matches currentDragTransferId. Removing tabs locally.');
         removeDraggedTabsLocally();
       }
     };
 
     function removeDraggedTabsLocally() {
       if (transferringTabIds.length === 0) return;
-      console.log('[DEBUG] Removing tabs:', transferringTabIds);
       transferringTabIds.forEach(id => closeTab(id, null, true));
       transferringTabIds = []; currentDragTransferId = null;
     }
 
     let tabs = []; let activeTabId = null; let tabIdCounter = 0; let selectedTabs = new Set();
 
-    function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null) {
-      console.log('[DEBUG] createTab called:', filename);
+    function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null, rawBytes = null) {
       const id = 'tab_' + (++tabIdCounter);
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
       session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
-      tabs.push({ id, filename, fileHandle, encoding, isDirty: false, session });
+      
+      // ★ 生のバイトデータを保持し、文字コード変更時の破壊を防ぐ ★
+      tabs.push({ id, filename, fileHandle, encoding, isDirty: false, session, rawBytes: rawBytes });
       selectedTabs.clear(); selectedTabs.add(id); switchTab(id); updateMode(filename);
       return id;
     }
 
     function switchTab(id) {
-      console.log('[DEBUG] switchTab called:', id);
       closeAllWinDialogs(); activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
     }
 
     function closeTab(id, event, force = false) {
-      console.log('[DEBUG] closeTab called:', id, 'force:', force);
       closeAllWinDialogs(); if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
@@ -418,9 +411,8 @@
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        console.log('[DEBUG] All tabs closed. Closing window.');
         window.close(); 
-        setTimeout(() => { if (tabs.length === 0) { console.log('[DEBUG] Window close failed. Creating new tab.'); createTab(); } }, 200); 
+        setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -438,21 +430,21 @@
         if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
         
         tabEl.draggable = true;
-        tabEl.ondragstart = async (e) => {
-          console.log('[DEBUG] dragstart on tab:', tab.id);
+        tabEl.ondragstart = (e) => {
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
-          transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          console.log('[DEBUG] transferringTabIds:', transferringTabIds, 'currentDragTransferId:', currentDragTransferId);
+          transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now().toString() + Math.random().toString().substr(2, 5);
+          
+          // ★ 確実な同期のためのID保存 ★
+          localStorage.setItem('notepad_current_drag_id', currentDragTransferId);
           
           e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
-          e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
+          e.dataTransfer.setData('text/plain', 'notepad-transfer'); // フォールバック用ダミー
 
-          console.log('[DEBUG] Creating ghost element for drag preview.');
+          // ★ リアルなプレビュー画像の生成 ★
           ghostElement = document.createElement('div');
           ghostElement.style.position = 'absolute'; ghostElement.style.top = '-10000px'; ghostElement.style.left = '-10000px';
           ghostElement.style.background = '#ffffff'; ghostElement.style.border = '1px solid #ccc';
-          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; ghostElement.style.width = '350px'; 
+          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)'; ghostElement.style.width = '350px'; 
           ghostElement.style.overflow = 'hidden'; ghostElement.style.borderRadius = '6px'; ghostElement.style.zIndex = '99999';
           ghostElement.style.display = 'flex'; ghostElement.style.flexDirection = 'column';
           
@@ -482,46 +474,56 @@
           ghostBody.innerText = activeT ? activeT.session.getValue().substring(0, 200) + '...' : '';
           
           ghostElement.appendChild(ghostHeader); ghostElement.appendChild(ghostMenu); ghostElement.appendChild(ghostBody); document.body.appendChild(ghostElement);
+          
           e.dataTransfer.setDragImage(ghostElement, 40, 15);
 
-          const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
-          await saveTransferData(currentDragTransferId, payload);
+          // 同期的にデータを準備
+          const payload = transferringTabIds.map(tid => { 
+            const t = tabs.find(x => x.id === tid); 
+            return { 
+                filename: t.filename, content: t.session.getValue(), encoding: t.encoding, 
+                isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes ? Array.from(t.rawBytes) : null
+            }; 
+          });
+          localStorage.setItem('notepad_drag_payload', JSON.stringify(payload));
+          
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
         tabEl.ondragover = (e) => {
           e.preventDefault(); e.stopPropagation(); document.getElementById('tab-bar').classList.remove('drag-over-empty'); e.dataTransfer.dropEffect = "move";
-          if (e.dataTransfer.types.length > 0) {
+          if (localStorage.getItem('notepad_current_drag_id')) {
              if (selectedTabs.has(tab.id)) return; const rect = tabEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); tabEl.classList.toggle('drag-over-left', isLeft); tabEl.classList.toggle('drag-over-right', !isLeft);
           }
         };
         tabEl.ondragleave = () => tabEl.classList.remove('drag-over-left', 'drag-over-right');
         tabEl.ondrop = (e) => handleTabDrop(e, tabEl, tab.id);
         
-        tabEl.ondragend = async (e) => {
-          console.log('[DEBUG] dragend on tab:', tab.id);
+        tabEl.ondragend = (e) => {
           if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
           if (currentDragTransferId) {
-             const tid = currentDragTransferId;
-             console.log('[DEBUG] Checking if adopted synchronously for tid:', tid);
-             const isAdopted = localStorage.getItem('tab_adopted_sync') === tid;
-             console.log('[DEBUG] isAdopted:', isAdopted);
+             // ★ 同期チェック：他のウィンドウが受け取ったか？ ★
+             const isAdopted = localStorage.getItem('tab_adopted_sync') === currentDragTransferId;
              
              if (!isAdopted) {
-                 console.log('[DEBUG] Not adopted. Window outside drop confirmed. Opening new window...');
-                 window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
+                 // 誰も受け取っていない＝外に出された
+                 window.open('./index.html?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600');
              } else {
-                 console.log('[DEBUG] Adopted synchronously by self or other window. No new window needed.');
+                 // 受信された場合はペイロードを削除
+                 localStorage.removeItem('notepad_drag_payload');
              }
+             
+             localStorage.removeItem('notepad_current_drag_id');
              localStorage.removeItem('tab_adopted_sync');
+             currentDragTransferId = null;
           }
           draggedTabId = null; 
         };
         
+        // ★ mousedownで複数選択バグを回避 ★
         tabEl.onmousedown = (e) => {
-          console.log('[DEBUG] mousedown on tab:', tab.id, 'shiftKey:', e.shiftKey);
           if (e.shiftKey) { 
               if (selectedTabs.has(tab.id)) { 
                   selectedTabs.delete(tab.id); 
@@ -541,92 +543,85 @@
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
-      console.log('[DEBUG] renderTabs completed. selectedTabs:', Array.from(selectedTabs));
     }
 
     const tabBar = document.getElementById('tab-bar');
     tabBar.ondragover = (e) => { 
         e.preventDefault(); 
-        if (e.dataTransfer.types.length > 0) { tabBar.classList.add('drag-over-empty'); }
+        if (localStorage.getItem('notepad_current_drag_id') || e.dataTransfer.types.includes('Files')) { tabBar.classList.add('drag-over-empty'); }
     };
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
-    // ★ エディタやその他領域をクリックした際の複数選択解除ロジック ★
+    // ★ 複数選択の意図しない解除を防ぐ（タブ以外の領域クリック時のみ解除） ★
     document.addEventListener('mousedown', e => {
-      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
       
-      // タブ以外の領域をクリックしたら、複数選択を解除してアクティブタブだけにする
-      if (!e.target.closest('.tab') && !e.target.closest('.win-dialog') && selectedTabs.size > 1) {
-          console.log('[DEBUG] Clearing multiple selection due to outside click.');
-          selectedTabs.clear();
-          if (activeTabId) selectedTabs.add(activeTabId);
-          renderTabs();
+      if (!e.target.closest('.tab') && !e.target.closest('.win-dialog') && !e.target.closest('.menu-container')) {
+          if (selectedTabs.size > 1) {
+              selectedTabs.clear();
+              if (activeTabId) selectedTabs.add(activeTabId);
+              renderTabs();
+          }
       }
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
-      console.log('[DEBUG] handleTabDrop. targetTabId:', targetTabId);
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
-      let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
-      if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
-      if (!transferId) transferId = localStorage.getItem('notepad_last_transfer_id');
+      const dragId = localStorage.getItem('notepad_current_drag_id');
       
-      console.log('[DEBUG] Dropped transferId:', transferId, 'currentDragTransferId:', currentDragTransferId);
-      
-      if (transferId && transferId !== currentDragTransferId) {
-        // ★ 他ウィンドウからのドロップ ★
-        console.log('[DEBUG] Receiving tabs from another window.');
-        localStorage.setItem('tab_adopted_sync', transferId);
-        bc.postMessage({ type: 'tabs-adopted', transferId });
-        
-        const payload = await getTransferData(transferId);
-        if (payload && Array.isArray(payload)) {
-          await deleteTransferData(transferId);
-          if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+      if (dragId) {
+        if (dragId !== currentDragTransferId) {
+          // ★ 他ウィンドウからのドロップ ★
+          localStorage.setItem('tab_adopted_sync', dragId); // 受信したことを同期的に送信元へ伝える
+          bc.postMessage({ type: 'tabs-adopted', transferId: dragId }); // 非同期でタブ消去を指示
+          
+          const payloadStr = localStorage.getItem('notepad_drag_payload');
+          if (payloadStr) {
+            const payload = JSON.parse(payloadStr);
+            if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+            
+            let toIndex = tabs.length;
+            if (targetEl && targetTabId && tabs.length > 0) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); if(toIndex < 0) toIndex = tabs.length; }
+            
+            selectedTabs.clear(); let lastId = null;
+            payload.forEach(data => {
+              const rawBytes = data.rawBytes ? new Uint8Array(data.rawBytes) : null;
+              const id = createTab(data.filename, data.content, data.encoding, data.handle, rawBytes); 
+              const newTab = tabs.find(t => t.id === id); if (data.isDirty && newTab) newTab.isDirty = true;
+              const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
+              selectedTabs.add(id); lastId = id;
+            });
+            renderTabs(); if(lastId) switchTab(lastId); 
+          }
+        } else {
+          // ★ 同一ウィンドウ内での並び替え ★
+          localStorage.setItem('tab_adopted_sync', dragId); // 自ウィンドウ内で処理完了したことを記録
           
           let toIndex = tabs.length;
-          if (targetEl && targetTabId && tabs.length > 0) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); if(toIndex < 0) toIndex = tabs.length; }
+          let isLeft = true;
+          if (targetEl && targetTabId) { 
+            const rect = targetEl.getBoundingClientRect(); 
+            isLeft = (e.clientX - rect.left) < (rect.width / 2); 
+            toIndex = tabs.findIndex(t => t.id === targetTabId); 
+            if (!isLeft) toIndex++;
+          }
           
-          selectedTabs.clear(); let lastId = null;
-          payload.forEach(data => {
-            const id = createTab(data.filename, data.content, data.encoding, data.handle); const newTab = tabs.find(t => t.id === id); if (data.isDirty && newTab) newTab.isDirty = true;
-            const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
-            selectedTabs.add(id); lastId = id;
-          });
-          renderTabs(); if(lastId) switchTab(lastId); 
+          const movedTabs = []; 
+          transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); } });
+          tabs = tabs.filter(t => !transferringTabIds.includes(t.id));
+          
+          if (targetTabId) { 
+            const newTargetIdx = tabs.findIndex(t => t.id === targetTabId);
+            if (newTargetIdx !== -1) { toIndex = newTargetIdx + (isLeft ? 0 : 1); } else { toIndex = tabs.length; }
+          } else { toIndex = tabs.length; }
+          
+          tabs.splice(toIndex, 0, ...movedTabs); 
+          renderTabs();
         }
-      } else if (transferringTabIds.length > 0) {
-        // ★ 同一ウィンドウ内での並び替え ★
-        console.log('[DEBUG] Reordering tabs within the same window.');
-        localStorage.setItem('tab_adopted_sync', currentDragTransferId); // 確実に同期フラグを立てる
-        
-        let toIndex = tabs.length;
-        let isLeft = true;
-        if (targetEl && targetTabId) { 
-          const rect = targetEl.getBoundingClientRect(); 
-          isLeft = (e.clientX - rect.left) < (rect.width / 2); 
-          toIndex = tabs.findIndex(t => t.id === targetTabId); 
-          if (!isLeft) toIndex++;
-        }
-        
-        const movedTabs = []; 
-        transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); } });
-        tabs = tabs.filter(t => !transferringTabIds.includes(t.id));
-        
-        if (targetTabId) { 
-          const newTargetIdx = tabs.findIndex(t => t.id === targetTabId);
-          if (newTargetIdx !== -1) { toIndex = newTargetIdx + (isLeft ? 0 : 1); } else { toIndex = tabs.length; }
-        } else { toIndex = tabs.length; }
-        
-        tabs.splice(toIndex, 0, ...movedTabs); 
-        
-        if (currentDragTransferId) { await deleteTransferData(currentDragTransferId); }
-        renderTabs();
       } else {
-        console.log('[DEBUG] File drop detected.');
+        // ★ ファイルのドロップ ★
         const items = e.dataTransfer.items; if (!items) return;
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
@@ -638,67 +633,18 @@
     }
 
     // ==========================================
-    // データベース・ストレージ管理
+    // データベース管理
     // ==========================================
     let db = null;
     function initDB() {
-      console.log('[DEBUG] Initializing DB...');
       return new Promise((resolve) => {
         const request = indexedDB.open('NotepadDB', 2);
         request.onupgradeneeded = (e) => {
           let database = e.target.result;
           if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings');
-          if (!database.objectStoreNames.contains('transfers')) database.createObjectStore('transfers');
         };
-        request.onsuccess = (e) => { db = e.target.result; console.log('[DEBUG] DB Initialized.'); resolve(); }; 
-        request.onerror = () => { console.error('[DEBUG] DB Initialization Failed.'); resolve(); };
+        request.onsuccess = (e) => { db = e.target.result; resolve(); }; request.onerror = () => { resolve(); };
       });
-    }
-
-    function saveTransferData(id, data) { 
-      console.log('[DEBUG] Saving transfer data. ID:', id);
-      localStorage.setItem('notepad_last_transfer_id', id);
-      try {
-        const safeData = data.map(d => ({...d, handle: null}));
-        localStorage.setItem('transfer_' + id, JSON.stringify(safeData));
-        localStorage.setItem('notepad_active_transfer_payload', JSON.stringify(safeData)); 
-      } catch(e) { console.error('[DEBUG] localStorage save error:', e); }
-      
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').put(data, id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
-    }
-
-    function getTransferData(id) { 
-      console.log('[DEBUG] Getting transfer data. ID:', id);
-      return new Promise(resolve => { 
-        if (!db) return resolve(null);
-        const tx = db.transaction('transfers', 'readonly'); 
-        const req = tx.objectStore('transfers').get(id); 
-        req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); 
-      }).then(data => {
-        if (data) return data;
-        console.log('[DEBUG] IndexedDB miss. Trying localStorage.');
-        const local = localStorage.getItem('transfer_' + id) || localStorage.getItem('notepad_active_transfer_payload');
-        if (local) { try { return JSON.parse(local); } catch(e) {} }
-        return null;
-      }); 
-    }
-
-    function deleteTransferData(id) { 
-      console.log('[DEBUG] Deleting transfer data. ID:', id);
-      localStorage.removeItem('transfer_' + id);
-      localStorage.removeItem('notepad_active_transfer_payload');
-      localStorage.removeItem('notepad_last_transfer_id');
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').delete(id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
     }
 
     function getRecentFiles() { return new Promise((resolve) => { if (!db) return resolve([]); const tx = db.transaction('settings', 'readonly'); const req = tx.objectStore('settings').get('recentFiles'); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
@@ -779,19 +725,33 @@
 
     function handleFileSelectFallback(e) { const files = e.target.files; if (!files) return; for (let i = 0; i < files.length; i++) loadFileProcess(files[i], null); e.target.value = ''; }
 
+    // ★ ファイル読み込み時に生のバイトデータ (rawBytes) を保存 ★
     async function loadFileProcess(file, handle) {
       for (let tab of tabs) {
         let isSame = false;
         if (handle && tab.fileHandle && tab.fileHandle.isSameEntry) { try { if (await handle.isSameEntry(tab.fileHandle)) isSame = true; } catch(e) {} } else if (tab.filename === file.name) { isSame = true; }
         if (isSame) { switchTab(tab.id); return; }
       }
-      const arrayBuffer = await file.arrayBuffer(); const bytes = new Uint8Array(arrayBuffer); const detected = Encoding.detect(bytes) || 'UTF8'; const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: detected }); const content = Encoding.codeToString(unicodeArray);
+      const arrayBuffer = await file.arrayBuffer(); 
+      const bytes = new Uint8Array(arrayBuffer); 
+      const detected = Encoding.detect(bytes) || 'UTF8'; 
+      const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: detected }); 
+      const content = Encoding.codeToString(unicodeArray);
+      
       const currentTab = getActiveTab();
-      if (currentTab && currentTab.filename === "無題" && !currentTab.isDirty && currentTab.session.getValue() === "") { currentTab.filename = file.name; currentTab.fileHandle = handle; currentTab.encoding = detected; currentTab.session.setValue(content); currentTab.session.getUndoManager().markClean(); currentTab.isDirty = false; updateMode(currentTab.filename); renderTabs(); updateTitleAndStatus(); } else { createTab(file.name, content, detected, handle); }
+      if (currentTab && currentTab.filename === "無題" && !currentTab.isDirty && currentTab.session.getValue() === "") { 
+          currentTab.filename = file.name; currentTab.fileHandle = handle; currentTab.encoding = detected; 
+          currentTab.rawBytes = bytes; // ここで保存
+          currentTab.session.setValue(content); currentTab.session.getUndoManager().markClean(); currentTab.isDirty = false; 
+          updateMode(currentTab.filename); renderTabs(); updateTitleAndStatus(); 
+      } else { 
+          createTab(file.name, content, detected, handle, bytes); // 引数として渡す
+      }
     }
 
     async function executeSave(tab) {
       const text = tab.session.getValue(); const unicodeArray = Encoding.stringToCode(text); const outArray = Encoding.convert(unicodeArray, { to: tab.encoding, from: 'UNICODE' }); const uint8Array = new Uint8Array(outArray);
+      tab.rawBytes = uint8Array; // 保存時にrawBytesも更新する
       if (tab.fileHandle) { try { const writable = await tab.fileHandle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); return; } catch (err) { console.log("上書き保存エラー:", err); tab.fileHandle = null; } }
       await saveWithPicker(uint8Array, tab);
     }
@@ -800,33 +760,29 @@
 
     async function saveWithPicker(uint8Array, tab) {
       if (window.showSaveFilePicker) {
-        try { const handle = await window.showSaveFilePicker({ suggestedName: tab.filename }); tab.fileHandle = handle; tab.filename = handle.name; const writable = await handle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); await addRecentFile(tab.filename, handle); } catch (err) {}
+        try { const handle = await window.showSaveFilePicker({ suggestedName: tab.filename }); tab.fileHandle = handle; tab.filename = handle.name; tab.rawBytes = uint8Array; const writable = await handle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); await addRecentFile(tab.filename, handle); } catch (err) {}
       } else {
-        let name = prompt("保存するファイル名を入力してください", tab.filename); if (!name) return; tab.filename = name; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename);
+        let name = prompt("保存するファイル名を入力してください", tab.filename); if (!name) return; tab.filename = name; tab.rawBytes = uint8Array; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename);
       }
     }
 
+    // ★ 完璧な文字コード変換処理（文字化けが完全に復元可能） ★
     function switchEncoding() {
       const tab = getActiveTab(); if(!tab) return; 
       const encs = ['UTF8', 'SJIS', 'EUCJP', 'UTF16']; 
       let idx = encs.indexOf(tab.encoding); 
-      const nextEnc = encs[(idx + 1) % encs.length];
+      tab.encoding = encs[(idx + 1) % encs.length];
       
-      console.log('[DEBUG] switchEncoding called. Current enc:', tab.encoding, 'Target enc:', nextEnc);
+      // 元の生のバイトデータが残っていて、かつ未編集の場合は、元のバイトから新しい文字コードで解釈し直す
+      if (tab.rawBytes && !tab.isDirty) {
+          const unicodeArray = Encoding.convert(tab.rawBytes, { to: 'UNICODE', from: tab.encoding }); 
+          tab.session.setValue(Encoding.codeToString(unicodeArray)); 
+          tab.session.getUndoManager().markClean(); 
+          tab.isDirty = false; 
+      }
+      // 編集済みの場合は表示を変えず、保存時のエンコーディング設定だけを変更する
       
-      tab.encoding = nextEnc;
-      
-      const currentContent = tab.session.getValue(); 
-      const bytes = Encoding.stringToCode(currentContent); 
-      const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: tab.encoding }); 
-      
-      console.log('[DEBUG] Convert Original length:', currentContent.length, 'Converted length:', unicodeArray.length);
-      
-      tab.session.setValue(Encoding.codeToString(unicodeArray)); 
-      tab.session.getUndoManager().markClean(); 
-      tab.isDirty = false; 
-      renderTabs(); 
-      updateTitleAndStatus();
+      renderTabs(); updateTitleAndStatus();
     }
 
     function printContent() { closeAllWinDialogs(); closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
@@ -852,36 +808,37 @@
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
-        console.log('[DEBUG] launchQueue triggered.');
         if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
     }
 
+    // ★ 起動時のデータ受け取り ★
     initDB().then(async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
       
-      console.log('[DEBUG] Initializing window. urlTransferId:', urlTransferId);
-      
       if (urlTransferId) {
-        const payload = await getTransferData(urlTransferId);
-        if (payload && Array.isArray(payload)) {
-          console.log('[DEBUG] Successfully retrieved payload for new window. Sending adopted signal.');
-          localStorage.setItem('tab_adopted_sync', urlTransferId);
-          bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
-          await deleteTransferData(urlTransferId);
-          selectedTabs.clear();
+        const payloadStr = localStorage.getItem('notepad_drag_payload');
+        if (payloadStr) {
+          const payload = JSON.parse(payloadStr);
           
+          // ドロップ元に「受け取った」と伝える
+          bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
+          
+          selectedTabs.clear();
           payload.forEach(data => {
-            const id = createTab(data.filename, data.content, data.encoding, data.handle);
+            const rawBytes = data.rawBytes ? new Uint8Array(data.rawBytes) : null;
+            const id = createTab(data.filename, data.content, data.encoding, data.handle, rawBytes);
             const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true;
             selectedTabs.add(id);
           });
           renderTabs();
           window.history.replaceState({}, document.title, window.location.pathname);
+          // 読み込み終わったのでペイロードを消す
+          localStorage.removeItem('notepad_drag_payload');
         } else { 
-          console.log('[DEBUG] Failed to retrieve payload. Closing window.');
+          // データがない場合は空振りのためウィンドウを閉じる
           window.close();
           setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
         }
