@@ -67,7 +67,13 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    .win-dialog { display: none; position: fixed; background: #f0f0f0; border: 1px solid #666; box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px; font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000; user-select: none; width: 460px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0; }
+    /* 検索・置換ダイアログ（はみ出し防止） */
+    .win-dialog {
+      display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
+      font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
+      user-select: none; width: 480px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0;
+    }
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
     .win-dialog-content { display: flex; gap: 10px; width: 100%; box-sizing: border-box; }
@@ -77,7 +83,7 @@
     .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; width: 100%; }
     .win-dialog-input:focus { border-color: #0078d7; }
     .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 110px; min-width: 110px; flex-shrink: 0; }
-    .win-dialog-btn { padding: 4px 6px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; overflow: hidden; }
+    .win-dialog-btn { padding: 4px 8px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
     .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px; align-items: center; }
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
@@ -122,6 +128,7 @@
 
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
+  <!-- Windows標準風 検索ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
@@ -149,6 +156,7 @@
     </div>
   </div>
 
+  <!-- Windows標準風 置換ダイアログ -->
   <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
@@ -261,7 +269,6 @@
   </div>
 
   <script>
-    console.log('[DEBUG] App Initialized.');
     let deferredPrompt;
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -329,25 +336,28 @@
     function stopDragDialog() { document.removeEventListener('mousemove', dragDialog); document.removeEventListener('mouseup', stopDragDialog); dragObj = null; }
 
     // ==========================================
-    // ウィンドウ間連携用 BroadcastChannel
+    // ウィンドウ間連携用
     // ==========================================
     let currentDragTransferId = null; 
     let transferringTabIds = []; 
     let ghostElement = null;
     let isDragging = false; 
 
+    // ★ ウィンドウ間で「受け取った」合図を共有する専用Set ★
+    let localAdoptedTids = new Set();
+
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      console.log('[DEBUG] BC Message received:', event.data);
-      if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
-        console.log('[DEBUG] Adopted signal matches currentDragTransferId. Removing tabs locally.');
-        removeDraggedTabsLocally();
+      if (event.data.type === 'tabs-adopted') {
+        localAdoptedTids.add(event.data.transferId);
+        if (event.data.transferId === currentDragTransferId) {
+          removeDraggedTabsLocally();
+        }
       }
     };
 
     function removeDraggedTabsLocally() {
       if (transferringTabIds.length === 0) return;
-      console.log('[DEBUG] Removing tabs:', transferringTabIds);
       transferringTabIds.forEach(id => closeTab(id, null, true));
       transferringTabIds = []; currentDragTransferId = null;
     }
@@ -355,7 +365,6 @@
     let tabs = []; let activeTabId = null; let tabIdCounter = 0; let selectedTabs = new Set();
 
     function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null, rawBytes = null, skipSelect = false) {
-      console.log('[DEBUG] createTab called:', filename, 'skipSelect:', skipSelect);
       const id = 'tab_' + (++tabIdCounter);
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
       session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
@@ -368,14 +377,12 @@
     }
 
     function switchTab(id) {
-      console.log('[DEBUG] switchTab called:', id);
       closeAllWinDialogs(); activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
     }
 
     function closeTab(id, event, force = false) {
-      console.log('[DEBUG] closeTab called:', id, 'force:', force);
       closeAllWinDialogs(); if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
@@ -384,9 +391,8 @@
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        console.log('[DEBUG] All tabs closed. Closing window.');
         window.close(); 
-        setTimeout(() => { if (tabs.length === 0) { console.log('[DEBUG] Window close failed. Creating new tab.'); createTab(); } }, 200); 
+        setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -404,58 +410,60 @@
         if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
         
         tabEl.draggable = true;
-        tabEl.ondragstart = async (e) => {
-          console.log('[DEBUG] dragstart on tab:', tab.id);
+        tabEl.ondragstart = (e) => {
           isDragging = true; 
           
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
           transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          console.log('[DEBUG] transferringTabIds:', transferringTabIds, 'currentDragTransferId:', currentDragTransferId);
           
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
           e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
 
-          console.log('[DEBUG] Creating ghost element for drag preview.');
-          ghostElement = document.createElement('div');
-          ghostElement.style.position = 'absolute'; ghostElement.style.top = '-10000px'; ghostElement.style.left = '-10000px';
-          ghostElement.style.background = '#ffffff'; ghostElement.style.border = '1px solid #ccc';
-          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; ghostElement.style.width = '350px'; 
-          ghostElement.style.overflow = 'hidden'; ghostElement.style.borderRadius = '6px'; ghostElement.style.zIndex = '99999';
-          ghostElement.style.display = 'flex'; ghostElement.style.flexDirection = 'column';
-          
-          const ghostHeader = document.createElement('div');
-          ghostHeader.style.background = '#e8eaed'; ghostHeader.style.padding = '6px 5px 0'; ghostHeader.style.display = 'flex'; ghostHeader.style.borderBottom = '1px solid #ccc';
-          
-          transferringTabIds.forEach(tid => {
-              const t = tabs.find(x => x.id === tid);
-              if (t) {
-                  const gTab = document.createElement('div');
-                  gTab.style.background = '#fff'; gTab.style.padding = '5px 12px'; gTab.style.borderRadius = '6px 6px 0 0';
-                  gTab.style.fontSize = '12px'; gTab.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; gTab.style.color = '#333';
-                  gTab.style.borderBottom = 'none'; gTab.style.marginRight = '2px'; gTab.innerText = t.filename;
-                  ghostHeader.appendChild(gTab);
-              }
-          });
-          
-          const ghostMenu = document.createElement('div');
-          ghostMenu.style.background = '#fff'; ghostMenu.style.padding = '4px 10px'; ghostMenu.style.display = 'flex'; ghostMenu.style.gap = '15px';
-          ghostMenu.style.fontSize = '12px'; ghostMenu.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; ghostMenu.style.color = '#333'; ghostMenu.style.borderBottom = '1px solid #eee';
-          ghostMenu.innerHTML = '<div>ファイル</div><div>編集</div><div>表示</div><div>設定</div>';
+          // ★ プレビュー(ゴースト画像)の作成（エラー耐性強化） ★
+          try {
+            ghostElement = document.createElement('div');
+            ghostElement.style.position = 'absolute'; ghostElement.style.top = '-10000px'; ghostElement.style.left = '-10000px';
+            ghostElement.style.background = '#ffffff'; ghostElement.style.border = '1px solid #ccc';
+            ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; ghostElement.style.width = '350px'; 
+            ghostElement.style.overflow = 'hidden'; ghostElement.style.borderRadius = '6px'; ghostElement.style.zIndex = '99999';
+            ghostElement.style.display = 'flex'; ghostElement.style.flexDirection = 'column';
+            
+            const ghostHeader = document.createElement('div');
+            ghostHeader.style.background = '#e8eaed'; ghostHeader.style.padding = '6px 5px 0'; ghostHeader.style.display = 'flex'; ghostHeader.style.borderBottom = '1px solid #ccc';
+            
+            transferringTabIds.forEach(tid => {
+                const t = tabs.find(x => x.id === tid);
+                if (t) {
+                    const gTab = document.createElement('div');
+                    gTab.style.background = '#fff'; gTab.style.padding = '5px 12px'; gTab.style.borderRadius = '6px 6px 0 0';
+                    gTab.style.fontSize = '12px'; gTab.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; gTab.style.color = '#333';
+                    gTab.style.borderBottom = 'none'; gTab.style.marginRight = '2px'; gTab.innerText = t.filename;
+                    ghostHeader.appendChild(gTab);
+                }
+            });
+            
+            const ghostMenu = document.createElement('div');
+            ghostMenu.style.background = '#fff'; ghostMenu.style.padding = '4px 10px'; ghostMenu.style.display = 'flex'; ghostMenu.style.gap = '15px';
+            ghostMenu.style.fontSize = '12px'; ghostMenu.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; ghostMenu.style.color = '#333'; ghostMenu.style.borderBottom = '1px solid #eee';
+            ghostMenu.innerHTML = '<div>ファイル</div><div>編集</div><div>表示</div><div>設定</div>';
 
-          const ghostBody = document.createElement('div');
-          ghostBody.style.padding = '10px 15px'; ghostBody.style.fontSize = '13px'; ghostBody.style.fontFamily = 'monospace'; ghostBody.style.color = '#000'; ghostBody.style.whiteSpace = 'pre-wrap'; ghostBody.style.height = '120px'; ghostBody.style.background = '#fff';
-          
-          const activeT = tabs.find(x => x.id === activeTabId) || tabs.find(x => x.id === transferringTabIds[0]);
-          ghostBody.innerText = activeT ? activeT.session.getValue().substring(0, 200) + '...' : '';
-          
-          ghostElement.appendChild(ghostHeader); ghostElement.appendChild(ghostMenu); ghostElement.appendChild(ghostBody); document.body.appendChild(ghostElement);
-          e.dataTransfer.setDragImage(ghostElement, 40, 15);
+            const ghostBody = document.createElement('div');
+            ghostBody.style.padding = '10px 15px'; ghostBody.style.fontSize = '13px'; ghostBody.style.fontFamily = 'monospace'; ghostBody.style.color = '#000'; ghostBody.style.whiteSpace = 'pre-wrap'; ghostBody.style.height = '120px'; ghostBody.style.background = '#fff';
+            
+            const activeT = tabs.find(x => x.id === activeTabId) || tabs.find(x => x.id === transferringTabIds[0]);
+            ghostBody.innerText = activeT ? activeT.session.getValue().substring(0, 200) + '...' : '';
+            
+            ghostElement.appendChild(ghostHeader); ghostElement.appendChild(ghostMenu); ghostElement.appendChild(ghostBody); document.body.appendChild(ghostElement);
+            e.dataTransfer.setDragImage(ghostElement, 40, 15);
+          } catch(err) {
+            console.error("Ghost preview error", err);
+          }
 
-          // ★ 非同期のDB保存を確実に「await」してからドラッグを許容させる ★
+          // ★ 同期的に保存して非同期エラーを防ぐ ★
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes ? Array.from(t.rawBytes) : null }; });
-          await saveTransferData(currentDragTransferId, payload);
-          console.log('[DEBUG] Transfer data saved for drag.');
+          saveTransferData(currentDragTransferId, payload);
+          
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
@@ -469,32 +477,27 @@
         tabEl.ondrop = (e) => handleTabDrop(e, tabEl, tab.id);
         
         tabEl.ondragend = (e) => {
-          console.log('[DEBUG] dragend on tab:', tab.id);
-          setTimeout(() => { isDragging = false; }, 100); 
-
           if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
           if (currentDragTransferId) {
              const tid = currentDragTransferId;
-             console.log('[DEBUG] Checking if adopted synchronously for tid:', tid);
-             const isAdopted = localStorage.getItem('tab_adopted_sync') === tid;
-             console.log('[DEBUG] isAdopted:', isAdopted);
-             
-             if (!isAdopted) {
-                 console.log('[DEBUG] Not adopted. Window outside drop confirmed. Opening new window...');
-                 window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
-             } else {
-                 console.log('[DEBUG] Adopted locally or remotely. Skipping new window.');
-             }
-             localStorage.removeItem('tab_adopted_sync');
              currentDragTransferId = null;
+             
+             // ★ 300ms待ち、他のウィンドウから「受け取った」合図がなければ新ウィンドウ作成 ★
+             setTimeout(() => {
+                 if (!localAdoptedTids.has(tid)) {
+                     window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
+                 }
+                 localAdoptedTids.delete(tid);
+             }, 300);
           }
+          
+          setTimeout(() => { isDragging = false; }, 100); 
           draggedTabId = null; 
         };
         
         tabEl.onmousedown = (e) => {
-          console.log('[DEBUG] mousedown on tab:', tab.id, 'shiftKey:', e.shiftKey);
           if (e.shiftKey) { 
               if (selectedTabs.has(tab.id)) { 
                   selectedTabs.delete(tab.id); 
@@ -520,7 +523,6 @@
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
-      console.log('[DEBUG] renderTabs completed. selectedTabs:', Array.from(selectedTabs));
     }
 
     const tabBar = document.getElementById('tab-bar');
@@ -532,11 +534,9 @@
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
     document.addEventListener('mousedown', e => {
-      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
       
       if (!isDragging && !e.target.closest('.tab') && !e.target.closest('.win-dialog') && !e.target.closest('.menu-container') && selectedTabs.size > 1) {
-          console.log('[DEBUG] Clearing multiple selection due to outside click.');
           selectedTabs.clear();
           if (activeTabId) selectedTabs.add(activeTabId);
           renderTabs();
@@ -544,18 +544,14 @@
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
-      console.log('[DEBUG] handleTabDrop. targetTabId:', targetTabId);
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
-      if (!transferId) transferId = localStorage.getItem('notepad_last_transfer_id');
-      
-      console.log('[DEBUG] Dropped transferId:', transferId, 'currentDragTransferId:', currentDragTransferId);
       
       if (transferId && transferId !== currentDragTransferId) {
-        console.log('[DEBUG] Receiving tabs from another window.');
-        localStorage.setItem('tab_adopted_sync', transferId);
+        // ★ 別のウィンドウからのドロップ：自分が受け取ったことをローカルと他ウィンドウに伝達 ★
+        localAdoptedTids.add(transferId);
         bc.postMessage({ type: 'tabs-adopted', transferId });
         
         const payload = await getTransferData(transferId);
@@ -574,11 +570,15 @@
             const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
             selectedTabs.add(id); lastId = id;
           });
-          renderTabs(); if(lastId) switchTab(lastId); 
+          
+          // ドロップの再描画を遅延させることで、ドラッグ元の dragend 発火を妨げない
+          setTimeout(() => {
+              renderTabs(); if(lastId) switchTab(lastId); 
+          }, 10);
         }
       } else if (transferringTabIds.length > 0) {
-        console.log('[DEBUG] Reordering tabs within the same window.');
-        localStorage.setItem('tab_adopted_sync', currentDragTransferId); 
+        // ★ 自ウィンドウ内での並び替え ★
+        localAdoptedTids.add(currentDragTransferId);
         
         let toIndex = tabs.length;
         let isLeft = true;
@@ -589,16 +589,9 @@
           if (!isLeft) toIndex++;
         }
         
-        // ★ タブ増殖バグを修正するため、一意な Set で重複を排除してから移動する ★
-        const uniqueTransferringIds = Array.from(new Set(transferringTabIds));
         const movedTabs = []; 
-        
-        uniqueTransferringIds.forEach(id => { 
-            const idx = tabs.findIndex(t => t.id === id); 
-            if (idx !== -1) { movedTabs.push(tabs[idx]); } 
-        });
-        
-        tabs = tabs.filter(t => !uniqueTransferringIds.includes(t.id));
+        transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); } });
+        tabs = tabs.filter(t => !transferringTabIds.includes(t.id));
         
         if (targetTabId) { 
           const newTargetIdx = tabs.findIndex(t => t.id === targetTabId);
@@ -608,9 +601,11 @@
         tabs.splice(toIndex, 0, ...movedTabs); 
         
         if (currentDragTransferId) { await deleteTransferData(currentDragTransferId); }
-        renderTabs();
+        
+        setTimeout(() => {
+            renderTabs();
+        }, 10);
       } else {
-        console.log('[DEBUG] File drop detected.');
         const items = e.dataTransfer.items; if (!items) return;
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
@@ -626,7 +621,6 @@
     // ==========================================
     let db = null;
     function initDB() {
-      console.log('[DEBUG] Initializing DB...');
       return new Promise((resolve) => {
         const request = indexedDB.open('NotepadDB', 2);
         request.onupgradeneeded = (e) => {
@@ -634,55 +628,28 @@
           if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings');
           if (!database.objectStoreNames.contains('transfers')) database.createObjectStore('transfers');
         };
-        request.onsuccess = (e) => { db = e.target.result; console.log('[DEBUG] DB Initialized.'); resolve(); }; 
-        request.onerror = () => { console.error('[DEBUG] DB Initialization Failed.'); resolve(); };
+        request.onsuccess = (e) => { db = e.target.result; resolve(); }; request.onerror = () => { resolve(); };
       });
     }
 
     function saveTransferData(id, data) { 
-      console.log('[DEBUG] Saving transfer data. ID:', id);
-      localStorage.setItem('notepad_last_transfer_id', id);
       try {
         const safeData = data.map(d => ({...d, handle: null}));
         localStorage.setItem('transfer_' + id, JSON.stringify(safeData));
-        localStorage.setItem('notepad_active_transfer_payload', JSON.stringify(safeData)); 
-      } catch(e) { console.error('[DEBUG] localStorage save error:', e); }
-      
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').put(data, id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
+      } catch(e) {}
     }
 
     function getTransferData(id) { 
-      console.log('[DEBUG] Getting transfer data. ID:', id);
       return new Promise(resolve => { 
-        if (!db) return resolve(null);
-        const tx = db.transaction('transfers', 'readonly'); 
-        const req = tx.objectStore('transfers').get(id); 
-        req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); 
-      }).then(data => {
-        if (data) return data;
-        console.log('[DEBUG] IndexedDB miss. Trying localStorage.');
-        const local = localStorage.getItem('transfer_' + id) || localStorage.getItem('notepad_active_transfer_payload');
-        if (local) { try { return JSON.parse(local); } catch(e) {} }
-        return null;
+        const local = localStorage.getItem('transfer_' + id);
+        if (local) { try { resolve(JSON.parse(local)); return; } catch(e) {} }
+        resolve(null);
       }); 
     }
 
     function deleteTransferData(id) { 
-      console.log('[DEBUG] Deleting transfer data. ID:', id);
       localStorage.removeItem('transfer_' + id);
-      localStorage.removeItem('notepad_active_transfer_payload');
-      localStorage.removeItem('notepad_last_transfer_id');
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').delete(id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
+      return Promise.resolve();
     }
 
     function getRecentFiles() { return new Promise((resolve) => { if (!db) return resolve([]); const tx = db.transaction('settings', 'readonly'); const req = tx.objectStore('settings').get('recentFiles'); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
@@ -841,39 +808,37 @@
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
-        console.log('[DEBUG] launchQueue triggered.');
         if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
     }
 
-    // ★ 起動時のデータ受け取り ★
     initDB().then(async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
       
-      console.log('[DEBUG] Initializing window. urlTransferId:', urlTransferId);
-      
       if (urlTransferId) {
-        const payloadStr = localStorage.getItem('notepad_drag_payload');
-        if (payloadStr) {
-          const payload = JSON.parse(payloadStr);
-          
-          console.log('[DEBUG] New window adopted tabs from localStorage.');
+        const payload = await getTransferData(urlTransferId);
+        if (payload && Array.isArray(payload)) {
+          // 自ら受け取ったことをローカルと他ウィンドウに伝達
+          localAdoptedTids.add(urlTransferId);
           bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
+          await deleteTransferData(urlTransferId);
           
           selectedTabs.clear();
+          
           payload.forEach(data => {
             const rawBytes = data.rawBytes ? new Uint8Array(data.rawBytes) : null;
             const id = createTab(data.filename, data.content, data.encoding, data.handle, rawBytes, true);
             const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true;
             selectedTabs.add(id);
           });
+          
           renderTabs();
+          if (tabs.length > 0) switchTab(tabs[0].id);
+          
           window.history.replaceState({}, document.title, window.location.pathname);
-          localStorage.removeItem('notepad_drag_payload');
         } else { 
-          console.log('[DEBUG] No payload found in localStorage. Window will close.');
           window.close();
           setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
         }
