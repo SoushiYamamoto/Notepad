@@ -14,36 +14,13 @@
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
-    /* タブバー */
-    .tab-bar {
-      display: flex; background: #e8eaed; 
-      padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px));
-      box-shadow: inset 0 -1px 0 0 #ccc;
-      align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none;
-      -webkit-app-region: drag;
-      transition: background-color 0.15s, box-shadow 0.15s;
-    }
+    .tab-bar { display: flex; background: #e8eaed; padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+    .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
     
-    .tab-bar.drag-over-empty {
-      background-color: #d0e3f5 !important;
-      box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important;
-    }
-    
-    .tab {
-      position: relative;
-      display: flex; align-items: center; justify-content: space-between;
-      min-width: 100px; max-width: 250px; 
-      padding: 6px 10px 7px 10px; margin-right: 2px;
-      background: #f3f3f3; 
-      border: 1px solid transparent; border-bottom: none;
-      border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default;
-      transition: background 0.2s; white-space: nowrap; overflow: hidden;
-      -webkit-app-region: no-drag;
-    }
+    .tab { position: relative; display: flex; align-items: center; justify-content: space-between; min-width: 100px; max-width: 250px; padding: 6px 10px 7px 10px; margin-right: 2px; background: #f3f3f3; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default; transition: background 0.2s; white-space: nowrap; overflow: hidden; -webkit-app-region: no-drag; }
     .tab:hover { background: #e0e0e0; }
-    
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
 
@@ -53,11 +30,9 @@
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close { margin-left: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
     .tab-close:hover { background: #ccc; color: #000; }
-    
     .add-tab-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; font-size: 18px; color: #555; -webkit-app-region: no-drag; }
     .add-tab-btn:hover { background: #d0d0d0; }
 
-    /* メニューバー */
     .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
     .menu-container { position: relative; }
     .menu-item-btn { padding: 6px 12px; cursor: default; border-radius: 4px; }
@@ -69,7 +44,6 @@
     .dropdown-item:hover { background: #f0f0f0; }
     .dropdown-divider { height: 1px; background: #eee; margin: 4px 0; }
     .shortcut { color: #888; margin-left: 30px; font-size: 11px; pointer-events: none; }
-    
     .has-submenu::after { content: "▶"; position: absolute; right: 10px; font-size: 9px; top: 9px; color: #888; }
     .submenu { display: none; position: absolute; top: 0; left: 100%; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); min-width: 180px; padding: 4px 0; margin-left: 2px; }
     .dropdown-item:hover > .submenu { display: block; }
@@ -82,13 +56,11 @@
     .status-left { display: flex; align-items: center; gap: 15px; }
     .status-right { display: flex; align-items: center; }
     .status-divider { width: 1px; height: 12px; background: #ccc; margin: 0 15px; }
-    
     .clickable-status { cursor: pointer; color: #333; }
     .clickable-status:hover { text-decoration: underline; }
     
     #fileInputFallback { display: none; }
 
-    /* モーダル遮断レイヤー */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2400; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-buttons { text-align: right; margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
@@ -96,27 +68,26 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* ★ 検索・置換ダイアログのスタイル完全最適化（はみ出し防止） ★ */
+    /* ダイアログはみ出し対策 CSS徹底強化 */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
       font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
-      user-select: none; width: 480px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0;
+      user-select: none; width: 480px; max-width: 98vw; border-radius: 2px; box-sizing: border-box; margin: 0;
     }
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
     .win-dialog-content { display: flex; gap: 10px; width: 100%; box-sizing: border-box; }
-    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; }
+    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 250px; }
     .win-dialog-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .win-dialog-label { width: 130px; min-width: 130px; white-space: nowrap; display: inline-block; text-align: left; }
-    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; min-width: 0; width: 100%; }
+    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; width: 100%; }
     .win-dialog-input:focus { border-color: #0078d7; }
     
-    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 110px; min-width: 110px; flex-shrink: 0; }
-    .win-dialog-btn { padding: 4px 8px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; }
+    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 120px; min-width: 120px; flex-shrink: 0; }
+    .win-dialog-btn { padding: 4px 6px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; overflow: hidden; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
-    
-    .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px;}
+    .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px; align-items: center; }
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
 
     @media print {
@@ -137,7 +108,6 @@
     <div class="modal-content">
       <h3>バージョン情報</h3>
       <p>ブラウザ上で動くメモ帳アプリ（タブ対応版）です。</p>
-      <p><a target="_blank" href="https://icons8.com/icon/cHos0K0vg9Ok/notepad">メモ帳</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a></p>
       <div class="modal-buttons"><button onclick="closeModals()">OK</button></div>
     </div>
   </div>
@@ -160,6 +130,7 @@
 
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
+  <!-- Windows標準風 検索ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
@@ -171,7 +142,7 @@
           <span class="win-dialog-label">検索する文字列(N):</span>
           <input type="text" id="winFindInput" class="win-dialog-input">
         </div>
-        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px; gap: 5px;">
           <label style="margin-bottom: 5px; white-space: nowrap;"><input type="checkbox" id="winFindMatchCase"> 大文字と小文字を区別(C)</label>
           <div class="win-dialog-group">
             <span class="win-dialog-group-title">検索方向</span>
@@ -187,6 +158,7 @@
     </div>
   </div>
 
+  <!-- Windows標準風 置換ダイアログ -->
   <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
@@ -299,14 +271,12 @@
   </div>
 
   <script>
+    console.log('[DEBUG] App Initialized.');
+
     let deferredPrompt;
-
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-      });
+      window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
     }
-
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault(); deferredPrompt = e;
       document.getElementById('menu-install-btn').style.display = 'flex';
@@ -315,7 +285,6 @@
         localStorage.setItem('installPromptShown', 'true');
       }
     });
-
     function installApp() {
       closeModals();
       if (deferredPrompt) {
@@ -327,9 +296,6 @@
       }
     }
 
-    // ==========================================
-    // エディタ設定
-    // ==========================================
     ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/textmate");
@@ -348,121 +314,55 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
-    // ★ Ace内部のショートカットコマンドを安全に上書き ★
-    editor.commands.addCommand({ name: 'find', bindKey: {win: 'Ctrl-F', mac: 'Command-F'}, exec: () => { openWinFind(); return false; }, readOnly: true });
-    editor.commands.addCommand({ name: 'replace', bindKey: {win: 'Ctrl-H', mac: 'Command-H'}, exec: () => { openWinReplace(); return false; }, readOnly: true });
-    editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => { menuAction('save'); return false; } });
-    editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => { menuAction('saveAs'); return false; } });
-    editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => { menuAction('open'); return false; } });
-    editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => { printContent(); return false; } });
+    if (editor.commands.commands.find) editor.commands.removeCommand('find');
+    if (editor.commands.commands.replace) editor.commands.removeCommand('replace');
+    
+    editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => menuAction('save') });
+    editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => menuAction('saveAs') });
+    editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
+    editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
 
-    // ウィンドウレベルでのショートカットキャプチャ（Chrome標準機能ブロック）
+    // ブラウザ標準検索等を強力にブロック
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
-        if (e.code === 'KeyF' || e.key === 'f' || e.key === 'F') { e.preventDefault(); e.stopPropagation(); openWinFind(); return false; } 
-        if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H') { e.preventDefault(); e.stopPropagation(); openWinReplace(); return false; } 
-        if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false; } 
-        if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O') { e.preventDefault(); e.stopPropagation(); menuAction('open'); return false; } 
-        if (e.code === 'KeyP' || e.key === 'p' || e.key === 'P') { e.preventDefault(); e.stopPropagation(); printContent(); return false; }
+        const keyStr = (e.key || '').toLowerCase();
+        if (e.code === 'KeyF' || keyStr === 'f') { e.preventDefault(); e.stopPropagation(); openWinFind(); return false; } 
+        if (e.code === 'KeyH' || keyStr === 'h') { e.preventDefault(); e.stopPropagation(); openWinReplace(); return false; } 
+        if (e.code === 'KeyS' || keyStr === 's') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false; } 
+        if (e.code === 'KeyO' || keyStr === 'o') { e.preventDefault(); e.stopPropagation(); menuAction('open'); return false; } 
+        if (e.code === 'KeyP' || keyStr === 'p') { e.preventDefault(); e.stopPropagation(); printContent(); return false; }
       } else if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
     }, { capture: true, passive: false });
 
-    // ==========================================
-    // 検索・置換モーダル制御
-    // ==========================================
     function openWinFind() {
       closeMenus(); closeWinDialog('winReplaceDialog');
       const selected = editor.getSelectedText();
-      if (selected && !selected.includes('\n')) {
-          document.getElementById('winFindInput').value = selected;
-      }
-      
+      if (selected && !selected.includes('\n')) { document.getElementById('winFindInput').value = selected; }
       const dialog = document.getElementById('winFindDialog');
-      if (!dialog.style.left || dialog.style.left.includes('%')) {
-          dialog.style.left = (window.innerWidth / 2 - 240) + 'px';
-          dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0';
-      }
-      document.getElementById('winDialogOverlay').style.display = 'block';
-      dialog.style.display = 'block';
-      document.getElementById('winFindInput').focus(); document.getElementById('winFindInput').select();
+      if (!dialog.style.left || dialog.style.left.includes('%')) { dialog.style.left = (window.innerWidth / 2 - 240) + 'px'; dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0'; }
+      document.getElementById('winDialogOverlay').style.display = 'block'; dialog.style.display = 'block'; document.getElementById('winFindInput').focus(); document.getElementById('winFindInput').select();
     }
-
     function openWinReplace() {
       closeMenus(); closeWinDialog('winFindDialog');
       const selected = editor.getSelectedText();
-      if (selected && !selected.includes('\n')) {
-          document.getElementById('winReplaceFindInput').value = selected;
-      }
-      
+      if (selected && !selected.includes('\n')) { document.getElementById('winReplaceFindInput').value = selected; }
       const dialog = document.getElementById('winReplaceDialog');
-      if (!dialog.style.left || dialog.style.left.includes('%')) {
-          dialog.style.left = (window.innerWidth / 2 - 240) + 'px';
-          dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0';
-      }
-      document.getElementById('winDialogOverlay').style.display = 'block';
-      dialog.style.display = 'block';
-      document.getElementById('winReplaceFindInput').focus(); document.getElementById('winReplaceFindInput').select();
+      if (!dialog.style.left || dialog.style.left.includes('%')) { dialog.style.left = (window.innerWidth / 2 - 240) + 'px'; dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0'; }
+      document.getElementById('winDialogOverlay').style.display = 'block'; dialog.style.display = 'block'; document.getElementById('winReplaceFindInput').focus(); document.getElementById('winReplaceFindInput').select();
     }
-
-    function closeAllWinDialogs() {
-      document.getElementById('winFindDialog').style.display = 'none';
-      document.getElementById('winReplaceDialog').style.display = 'none';
-      document.getElementById('winDialogOverlay').style.display = 'none';
-      editor.focus();
-    }
-
+    function closeAllWinDialogs() { document.getElementById('winFindDialog').style.display = 'none'; document.getElementById('winReplaceDialog').style.display = 'none'; document.getElementById('winDialogOverlay').style.display = 'none'; editor.focus(); }
     function closeWinDialog(id) { document.getElementById(id).style.display = 'none'; }
-
     document.getElementById('winFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinFind(); if (e.key === 'Escape') closeAllWinDialogs(); });
     document.getElementById('winReplaceFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceFind(); if (e.key === 'Escape') closeAllWinDialogs(); });
     document.getElementById('winReplaceWithInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceOne(); if (e.key === 'Escape') closeAllWinDialogs(); });
 
-    function execWinFind() {
-      const needle = document.getElementById('winFindInput').value; if (!needle) return;
-      const caseSensitive = document.getElementById('winFindMatchCase').checked;
-      const backwards = document.querySelector('input[name="winFindDir"]:checked').value === 'up';
-      const found = editor.find(needle, { backwards: backwards, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false });
-      if (!found) alert(`"${needle}" が見つかりません。`);
-    }
-
-    function execWinReplaceFind() {
-      const needle = document.getElementById('winReplaceFindInput').value; if (!needle) return;
-      const caseSensitive = document.getElementById('winReplaceMatchCase').checked;
-      const found = editor.find(needle, { backwards: false, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false });
-      if (!found) alert(`"${needle}" が見つかりません。`);
-    }
-
-    function execWinReplaceOne() {
-      const needle = document.getElementById('winReplaceFindInput').value;
-      const replacement = document.getElementById('winReplaceWithInput').value;
-      if (!needle) return;
-      if (editor.getSelectedText() === needle) { editor.insert(replacement); }
-      execWinReplaceFind();
-    }
-
-    function execWinReplaceAll() {
-      const needle = document.getElementById('winReplaceFindInput').value;
-      const replacement = document.getElementById('winReplaceWithInput').value;
-      if (!needle) return;
-      const caseSensitive = document.getElementById('winReplaceMatchCase').checked;
-      editor.moveCursorTo(0, 0); let count = 0;
-      while (editor.find(needle, { backwards: false, wrap: false, caseSensitive: caseSensitive, wholeWord: false, regExp: false })) {
-        editor.insert(replacement); count++;
-      }
-      alert(`${count} 個の項目を置換しました。`);
-    }
+    function execWinFind() { const needle = document.getElementById('winFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winFindMatchCase').checked; const backwards = document.querySelector('input[name="winFindDir"]:checked').value === 'up'; const found = editor.find(needle, { backwards: backwards, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" が見つかりません。`); }
+    function execWinReplaceFind() { const needle = document.getElementById('winReplaceFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; const found = editor.find(needle, { backwards: false, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" が見つかりません。`); }
+    function execWinReplaceOne() { const needle = document.getElementById('winReplaceFindInput').value; const replacement = document.getElementById('winReplaceWithInput').value; if (!needle) return; if (editor.getSelectedText() === needle) { editor.insert(replacement); } execWinReplaceFind(); }
+    function execWinReplaceAll() { const needle = document.getElementById('winReplaceFindInput').value; const replacement = document.getElementById('winReplaceWithInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; editor.moveCursorTo(0, 0); let count = 0; while (editor.find(needle, { backwards: false, wrap: false, caseSensitive: caseSensitive, wholeWord: false, regExp: false })) { editor.insert(replacement); count++; } alert(`${count} 個の項目を置換しました。`); }
 
     let dragObj = null; let offsetX = 0; let offsetY = 0;
-    function startDragDialog(e, id) {
-      dragObj = document.getElementById(id);
-      const rect = dragObj.getBoundingClientRect();
-      dragObj.style.margin = '0';
-      dragObj.style.transform = 'none';
-      dragObj.style.left = rect.left + 'px';
-      dragObj.style.top = rect.top + 'px';
-      offsetX = e.clientX - rect.left; offsetY = e.clientY - rect.top;
-      document.addEventListener('mousemove', dragDialog); document.addEventListener('mouseup', stopDragDialog);
-    }
+    function startDragDialog(e, id) { dragObj = document.getElementById(id); const rect = dragObj.getBoundingClientRect(); dragObj.style.margin = '0'; dragObj.style.transform = 'none'; dragObj.style.left = rect.left + 'px'; dragObj.style.top = rect.top + 'px'; offsetX = e.clientX - rect.left; offsetY = e.clientY - rect.top; document.addEventListener('mousemove', dragDialog); document.addEventListener('mouseup', stopDragDialog); }
     function dragDialog(e) { if (!dragObj) return; dragObj.style.left = (e.clientX - offsetX) + 'px'; dragObj.style.top = (e.clientY - offsetY) + 'px'; }
     function stopDragDialog() { document.removeEventListener('mousemove', dragDialog); document.removeEventListener('mouseup', stopDragDialog); dragObj = null; }
 
@@ -475,61 +375,52 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      // 別のウィンドウから「データを受け取った」という合図が来たときだけ、こちらの古いタブを消去する
+      console.log('[DEBUG] BC Message received:', event.data);
       if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
+        console.log('[DEBUG] Adopted signal matches currentDragTransferId. Removing tabs locally.');
         removeDraggedTabsLocally();
       }
     };
 
     function removeDraggedTabsLocally() {
       if (transferringTabIds.length === 0) return;
+      console.log('[DEBUG] Removing tabs:', transferringTabIds);
       transferringTabIds.forEach(id => closeTab(id, null, true));
       transferringTabIds = []; currentDragTransferId = null;
     }
 
-    // ==========================================
-    // タブ管理・ドラッグ＆ドロップ
-    // ==========================================
-    let tabs = [];
-    let activeTabId = null;
-    let tabIdCounter = 0;
-    let selectedTabs = new Set();
+    let tabs = []; let activeTabId = null; let tabIdCounter = 0; let selectedTabs = new Set();
 
     function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null) {
+      console.log('[DEBUG] createTab called:', filename);
       const id = 'tab_' + (++tabIdCounter);
-      const session = new ace.EditSession(content);
-      session.setMode("ace/mode/text");
-      session.setUndoManager(new ace.UndoManager());
-      session.on('change', () => {
-        const tab = tabs.find(t => t.id === id);
-        if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); }
-      });
+      const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
+      session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
       tabs.push({ id, filename, fileHandle, encoding, isDirty: false, session });
       selectedTabs.clear(); selectedTabs.add(id); switchTab(id); updateMode(filename);
       return id;
     }
 
     function switchTab(id) {
-      closeAllWinDialogs(); 
-      activeTabId = id; const tab = getActiveTab(); if (!tab) return;
+      console.log('[DEBUG] switchTab called:', id);
+      closeAllWinDialogs(); activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
     }
 
     function closeTab(id, event, force = false) {
-      closeAllWinDialogs(); 
-      if (event) event.stopPropagation();
+      console.log('[DEBUG] closeTab called:', id, 'force:', force);
+      closeAllWinDialogs(); if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
       if (!force && tab.isDirty) { if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) return; }
       
-      tabs.splice(tabIndex, 1); 
-      selectedTabs.delete(id);
+      tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        // 最後のタブを消した場合はウィンドウを閉じる
+        console.log('[DEBUG] All tabs closed. Closing window.');
         window.close(); 
-        setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
+        setTimeout(() => { if (tabs.length === 0) { console.log('[DEBUG] Window close failed. Creating new tab.'); createTab(); } }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -547,87 +438,54 @@
         if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
         
         tabEl.draggable = true;
-        
-        // ★ ドラッグ開始処理（同期処理） ★
-        tabEl.ondragstart = (e) => {
+        tabEl.ondragstart = async (e) => {
+          console.log('[DEBUG] dragstart on tab:', tab.id);
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
           transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          console.log('[DEBUG] transferringTabIds:', transferringTabIds, 'currentDragTransferId:', currentDragTransferId);
           
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
           e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
 
-          // ★ プレビュー(ゴースト画像)の作成 ★
+          console.log('[DEBUG] Creating ghost element for drag preview.');
           ghostElement = document.createElement('div');
-          ghostElement.style.position = 'absolute';
-          ghostElement.style.top = '-10000px'; 
-          ghostElement.style.left = '-10000px';
-          ghostElement.style.background = '#ffffff'; 
-          ghostElement.style.border = '1px solid #ccc';
-          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; 
-          ghostElement.style.width = '350px'; 
-          ghostElement.style.overflow = 'hidden'; 
-          ghostElement.style.borderRadius = '6px'; 
-          ghostElement.style.zIndex = '99999';
-          ghostElement.style.display = 'flex';
-          ghostElement.style.flexDirection = 'column';
+          ghostElement.style.position = 'absolute'; ghostElement.style.top = '-10000px'; ghostElement.style.left = '-10000px';
+          ghostElement.style.background = '#ffffff'; ghostElement.style.border = '1px solid #ccc';
+          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; ghostElement.style.width = '350px'; 
+          ghostElement.style.overflow = 'hidden'; ghostElement.style.borderRadius = '6px'; ghostElement.style.zIndex = '99999';
+          ghostElement.style.display = 'flex'; ghostElement.style.flexDirection = 'column';
           
           const ghostHeader = document.createElement('div');
-          ghostHeader.style.background = '#e8eaed';
-          ghostHeader.style.padding = '6px 5px 0';
-          ghostHeader.style.display = 'flex';
-          ghostHeader.style.borderBottom = '1px solid #ccc';
+          ghostHeader.style.background = '#e8eaed'; ghostHeader.style.padding = '6px 5px 0'; ghostHeader.style.display = 'flex'; ghostHeader.style.borderBottom = '1px solid #ccc';
           
           transferringTabIds.forEach(tid => {
               const t = tabs.find(x => x.id === tid);
               if (t) {
                   const gTab = document.createElement('div');
-                  gTab.style.background = '#fff';
-                  gTab.style.padding = '5px 12px';
-                  gTab.style.borderRadius = '6px 6px 0 0';
-                  gTab.style.fontSize = '12px';
-                  gTab.style.fontFamily = "'Segoe UI', Meiryo, sans-serif";
-                  gTab.style.color = '#333';
-                  gTab.style.borderBottom = 'none';
-                  gTab.style.marginRight = '2px';
-                  gTab.innerText = t.filename;
+                  gTab.style.background = '#fff'; gTab.style.padding = '5px 12px'; gTab.style.borderRadius = '6px 6px 0 0';
+                  gTab.style.fontSize = '12px'; gTab.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; gTab.style.color = '#333';
+                  gTab.style.borderBottom = 'none'; gTab.style.marginRight = '2px'; gTab.innerText = t.filename;
                   ghostHeader.appendChild(gTab);
               }
           });
           
           const ghostMenu = document.createElement('div');
-          ghostMenu.style.background = '#fff';
-          ghostMenu.style.padding = '4px 10px';
-          ghostMenu.style.display = 'flex';
-          ghostMenu.style.gap = '15px';
-          ghostMenu.style.fontSize = '12px';
-          ghostMenu.style.fontFamily = "'Segoe UI', Meiryo, sans-serif";
-          ghostMenu.style.color = '#333';
-          ghostMenu.style.borderBottom = '1px solid #eee';
+          ghostMenu.style.background = '#fff'; ghostMenu.style.padding = '4px 10px'; ghostMenu.style.display = 'flex'; ghostMenu.style.gap = '15px';
+          ghostMenu.style.fontSize = '12px'; ghostMenu.style.fontFamily = "'Segoe UI', Meiryo, sans-serif"; ghostMenu.style.color = '#333'; ghostMenu.style.borderBottom = '1px solid #eee';
           ghostMenu.innerHTML = '<div>ファイル</div><div>編集</div><div>表示</div><div>設定</div>';
 
           const ghostBody = document.createElement('div');
-          ghostBody.style.padding = '10px 15px';
-          ghostBody.style.fontSize = '13px';
-          ghostBody.style.fontFamily = 'monospace';
-          ghostBody.style.color = '#000';
-          ghostBody.style.whiteSpace = 'pre-wrap';
-          ghostBody.style.height = '120px';
-          ghostBody.style.background = '#fff';
+          ghostBody.style.padding = '10px 15px'; ghostBody.style.fontSize = '13px'; ghostBody.style.fontFamily = 'monospace'; ghostBody.style.color = '#000'; ghostBody.style.whiteSpace = 'pre-wrap'; ghostBody.style.height = '120px'; ghostBody.style.background = '#fff';
           
           const activeT = tabs.find(x => x.id === activeTabId) || tabs.find(x => x.id === transferringTabIds[0]);
           ghostBody.innerText = activeT ? activeT.session.getValue().substring(0, 200) + '...' : '';
           
-          ghostElement.appendChild(ghostHeader);
-          ghostElement.appendChild(ghostMenu);
-          ghostElement.appendChild(ghostBody);
-          document.body.appendChild(ghostElement);
-          
+          ghostElement.appendChild(ghostHeader); ghostElement.appendChild(ghostMenu); ghostElement.appendChild(ghostBody); document.body.appendChild(ghostElement);
           e.dataTransfer.setDragImage(ghostElement, 40, 15);
 
-          // 非同期保存はイベントの最後に逃がす
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
-          saveTransferData(currentDragTransferId, payload);
+          await saveTransferData(currentDragTransferId, payload);
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
@@ -640,38 +498,50 @@
         tabEl.ondragleave = () => tabEl.classList.remove('drag-over-left', 'drag-over-right');
         tabEl.ondrop = (e) => handleTabDrop(e, tabEl, tab.id);
         
-        tabEl.ondragend = (e) => {
-          if (ghostElement && ghostElement.parentNode) {
-            ghostElement.parentNode.removeChild(ghostElement);
-            ghostElement = null;
-          }
-
+        tabEl.ondragend = async (e) => {
+          console.log('[DEBUG] dragend on tab:', tab.id);
+          if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
-          // ★ ドラッグ終了時に、ストレージを使って「他のウィンドウが受け取ったか」を同期的にチェック ★
           if (currentDragTransferId) {
              const tid = currentDragTransferId;
+             console.log('[DEBUG] Checking if adopted synchronously for tid:', tid);
              const isAdopted = localStorage.getItem('tab_adopted_sync') === tid;
+             console.log('[DEBUG] isAdopted:', isAdopted);
              
              if (!isAdopted) {
-                 // 誰も受け取っていない＝外に出された
+                 console.log('[DEBUG] Not adopted. Window outside drop confirmed. Opening new window...');
                  window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
+             } else {
+                 console.log('[DEBUG] Adopted synchronously by self or other window. No new window needed.');
              }
-             
              localStorage.removeItem('tab_adopted_sync');
           }
           draggedTabId = null; 
         };
         
-        tabEl.onclick = (e) => {
-          if (e.shiftKey) { if (selectedTabs.has(tab.id)) { selectedTabs.delete(tab.id); if (activeTabId === tab.id && selectedTabs.size > 0) switchTab(Array.from(selectedTabs)[0]); } else { selectedTabs.add(tab.id); switchTab(tab.id); } renderTabs(); }
-          else { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
+        tabEl.onmousedown = (e) => {
+          console.log('[DEBUG] mousedown on tab:', tab.id, 'shiftKey:', e.shiftKey);
+          if (e.shiftKey) { 
+              if (selectedTabs.has(tab.id)) { 
+                  selectedTabs.delete(tab.id); 
+                  if (activeTabId === tab.id && selectedTabs.size > 0) switchTab(Array.from(selectedTabs)[0]); 
+              } else { 
+                  selectedTabs.add(tab.id); switchTab(tab.id); 
+              } 
+              renderTabs(); 
+          } else { 
+              if (!selectedTabs.has(tab.id)) {
+                  selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); 
+              }
+          }
         };
         
         const titleEl = document.createElement('div'); titleEl.className = 'tab-title'; titleEl.innerText = (tab.isDirty ? "*" : "") + tab.filename;
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
+      console.log('[DEBUG] renderTabs completed. selectedTabs:', Array.from(selectedTabs));
     }
 
     const tabBar = document.getElementById('tab-bar');
@@ -682,35 +552,39 @@
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
-    // ★ エディタ部分をクリックした時の「複数選択解除」 ★
-    document.getElementById('editor').addEventListener('mousedown', () => {
-      if (selectedTabs.size > 1) { 
-          selectedTabs.clear(); 
-          if (activeTabId) selectedTabs.add(activeTabId); 
-          renderTabs(); 
-      }
-    }, true);
-    
+    // ★ エディタやその他領域をクリックした際の複数選択解除ロジック ★
     document.addEventListener('mousedown', e => {
+      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
+      
+      // タブ以外の領域をクリックしたら、複数選択を解除してアクティブタブだけにする
+      if (!e.target.closest('.tab') && !e.target.closest('.win-dialog') && selectedTabs.size > 1) {
+          console.log('[DEBUG] Clearing multiple selection due to outside click.');
+          selectedTabs.clear();
+          if (activeTabId) selectedTabs.add(activeTabId);
+          renderTabs();
+      }
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
+      console.log('[DEBUG] handleTabDrop. targetTabId:', targetTabId);
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
       if (!transferId) transferId = localStorage.getItem('notepad_last_transfer_id');
       
+      console.log('[DEBUG] Dropped transferId:', transferId, 'currentDragTransferId:', currentDragTransferId);
+      
       if (transferId && transferId !== currentDragTransferId) {
-        // ★ 他のウィンドウからドロップされた場合、同期的に受け取りフラグを立てる ★
+        // ★ 他ウィンドウからのドロップ ★
+        console.log('[DEBUG] Receiving tabs from another window.');
         localStorage.setItem('tab_adopted_sync', transferId);
         bc.postMessage({ type: 'tabs-adopted', transferId });
         
         const payload = await getTransferData(transferId);
         if (payload && Array.isArray(payload)) {
           await deleteTransferData(transferId);
-          
           if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
           
           let toIndex = tabs.length;
@@ -726,8 +600,8 @@
         }
       } else if (transferringTabIds.length > 0) {
         // ★ 同一ウィンドウ内での並び替え ★
-        // 自分自身で受け取った場合も、新規ウィンドウが開かないようにフラグを立てる
-        localStorage.setItem('tab_adopted_sync', currentDragTransferId);
+        console.log('[DEBUG] Reordering tabs within the same window.');
+        localStorage.setItem('tab_adopted_sync', currentDragTransferId); // 確実に同期フラグを立てる
         
         let toIndex = tabs.length;
         let isLeft = true;
@@ -739,32 +613,20 @@
         }
         
         const movedTabs = []; 
-        transferringTabIds.forEach(id => { 
-          const idx = tabs.findIndex(t => t.id === id); 
-          if (idx !== -1) { movedTabs.push(tabs[idx]); } 
-        });
-        
+        transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); } });
         tabs = tabs.filter(t => !transferringTabIds.includes(t.id));
         
         if (targetTabId) { 
           const newTargetIdx = tabs.findIndex(t => t.id === targetTabId);
-          if (newTargetIdx !== -1) {
-            toIndex = newTargetIdx + (isLeft ? 0 : 1); 
-          } else {
-            toIndex = tabs.length;
-          }
-        } else {
-          toIndex = tabs.length;
-        }
+          if (newTargetIdx !== -1) { toIndex = newTargetIdx + (isLeft ? 0 : 1); } else { toIndex = tabs.length; }
+        } else { toIndex = tabs.length; }
         
         tabs.splice(toIndex, 0, ...movedTabs); 
         
-        if (currentDragTransferId) {
-           await deleteTransferData(currentDragTransferId);
-        }
-        
+        if (currentDragTransferId) { await deleteTransferData(currentDragTransferId); }
         renderTabs();
       } else {
+        console.log('[DEBUG] File drop detected.');
         const items = e.dataTransfer.items; if (!items) return;
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
@@ -780,6 +642,7 @@
     // ==========================================
     let db = null;
     function initDB() {
+      console.log('[DEBUG] Initializing DB...');
       return new Promise((resolve) => {
         const request = indexedDB.open('NotepadDB', 2);
         request.onupgradeneeded = (e) => {
@@ -787,17 +650,19 @@
           if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings');
           if (!database.objectStoreNames.contains('transfers')) database.createObjectStore('transfers');
         };
-        request.onsuccess = (e) => { db = e.target.result; resolve(); }; request.onerror = () => { resolve(); };
+        request.onsuccess = (e) => { db = e.target.result; console.log('[DEBUG] DB Initialized.'); resolve(); }; 
+        request.onerror = () => { console.error('[DEBUG] DB Initialization Failed.'); resolve(); };
       });
     }
 
     function saveTransferData(id, data) { 
+      console.log('[DEBUG] Saving transfer data. ID:', id);
       localStorage.setItem('notepad_last_transfer_id', id);
       try {
         const safeData = data.map(d => ({...d, handle: null}));
         localStorage.setItem('transfer_' + id, JSON.stringify(safeData));
         localStorage.setItem('notepad_active_transfer_payload', JSON.stringify(safeData)); 
-      } catch(e) {}
+      } catch(e) { console.error('[DEBUG] localStorage save error:', e); }
       
       return new Promise(resolve => { 
         if (!db) return resolve();
@@ -808,6 +673,7 @@
     }
 
     function getTransferData(id) { 
+      console.log('[DEBUG] Getting transfer data. ID:', id);
       return new Promise(resolve => { 
         if (!db) return resolve(null);
         const tx = db.transaction('transfers', 'readonly'); 
@@ -815,6 +681,7 @@
         req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); 
       }).then(data => {
         if (data) return data;
+        console.log('[DEBUG] IndexedDB miss. Trying localStorage.');
         const local = localStorage.getItem('transfer_' + id) || localStorage.getItem('notepad_active_transfer_payload');
         if (local) { try { return JSON.parse(local); } catch(e) {} }
         return null;
@@ -822,6 +689,7 @@
     }
 
     function deleteTransferData(id) { 
+      console.log('[DEBUG] Deleting transfer data. ID:', id);
       localStorage.removeItem('transfer_' + id);
       localStorage.removeItem('notepad_active_transfer_payload');
       localStorage.removeItem('notepad_last_transfer_id');
@@ -939,8 +807,26 @@
     }
 
     function switchEncoding() {
-      const tab = getActiveTab(); if(!tab) return; const encs = ['UTF8', 'SJIS', 'EUCJP', 'UTF16']; let idx = encs.indexOf(tab.encoding); tab.encoding = encs[(idx + 1) % encs.length];
-      const currentContent = tab.session.getValue(); const bytes = Encoding.stringToCode(currentContent); const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: tab.encoding }); tab.session.setValue(Encoding.codeToString(unicodeArray)); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus();
+      const tab = getActiveTab(); if(!tab) return; 
+      const encs = ['UTF8', 'SJIS', 'EUCJP', 'UTF16']; 
+      let idx = encs.indexOf(tab.encoding); 
+      const nextEnc = encs[(idx + 1) % encs.length];
+      
+      console.log('[DEBUG] switchEncoding called. Current enc:', tab.encoding, 'Target enc:', nextEnc);
+      
+      tab.encoding = nextEnc;
+      
+      const currentContent = tab.session.getValue(); 
+      const bytes = Encoding.stringToCode(currentContent); 
+      const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: tab.encoding }); 
+      
+      console.log('[DEBUG] Convert Original length:', currentContent.length, 'Converted length:', unicodeArray.length);
+      
+      tab.session.setValue(Encoding.codeToString(unicodeArray)); 
+      tab.session.getUndoManager().markClean(); 
+      tab.isDirty = false; 
+      renderTabs(); 
+      updateTitleAndStatus();
     }
 
     function printContent() { closeAllWinDialogs(); closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
@@ -966,20 +852,24 @@
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
+        console.log('[DEBUG] launchQueue triggered.');
         if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
     }
 
-    // ★ 起動初期化ロジック ★
     initDB().then(async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
       
+      console.log('[DEBUG] Initializing window. urlTransferId:', urlTransferId);
+      
       if (urlTransferId) {
         const payload = await getTransferData(urlTransferId);
         if (payload && Array.isArray(payload)) {
-          // ここでは合図を出さず、データの復元に集中する（同期ロジックで既に処理されているため）
+          console.log('[DEBUG] Successfully retrieved payload for new window. Sending adopted signal.');
+          localStorage.setItem('tab_adopted_sync', urlTransferId);
+          bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
           await deleteTransferData(urlTransferId);
           selectedTabs.clear();
           
@@ -991,7 +881,7 @@
           renderTabs();
           window.history.replaceState({}, document.title, window.location.pathname);
         } else { 
-          // データがない場合は空振りのためウィンドウを閉じる
+          console.log('[DEBUG] Failed to retrieve payload. Closing window.');
           window.close();
           setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
         }
