@@ -96,27 +96,24 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* ★ 検索・置換ダイアログのスタイル ★ */
+    /* Windows標準のメモ帳風「検索・置換」ダイアログ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
       font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
-      user-select: none; width: 460px; border-radius: 2px; box-sizing: border-box; margin: 0;
+      user-select: none; width: 440px; border-radius: 2px; box-sizing: border-box; margin: 0;
     }
-    .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 12px; cursor: move; font-weight: bold; }
+    .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
-    
     .win-dialog-content { display: flex; gap: 15px; width: 100%; box-sizing: border-box; }
     .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; }
     .win-dialog-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .win-dialog-label { width: 120px; min-width: 120px; white-space: nowrap; display: inline-block; text-align: left; }
-    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; min-width: 0; }
+    .win-dialog-label { width: 125px; min-width: 125px; white-space: nowrap; display: inline-block; text-align: left; }
+    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; min-width: 0; width: 100%; }
     .win-dialog-input:focus { border-color: #0078d7; }
-    
-    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 95px; min-width: 95px; flex-shrink: 0; }
-    .win-dialog-btn { padding: 4px 0; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; }
+    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 110px; min-width: 110px; flex-shrink: 0; }
+    .win-dialog-btn { padding: 4px 0; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
-    
     .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px;}
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
 
@@ -134,6 +131,7 @@
 </head>
 <body>
 
+  <!-- バージョン情報など -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -163,7 +161,7 @@
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
   <!-- Windows標準風 検索ダイアログ -->
-  <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 230px);">
+  <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
@@ -191,7 +189,7 @@
   </div>
 
   <!-- Windows標準風 置換ダイアログ -->
-  <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 230px);">
+  <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
@@ -352,25 +350,38 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
-    // ★ Aceのコマンドを自作ダイアログ用に上書き登録 ★
-    editor.commands.addCommand({ name: 'find', bindKey: {win: 'Ctrl-F', mac: 'Command-F'}, exec: () => openWinFind() });
-    editor.commands.addCommand({ name: 'replace', bindKey: {win: 'Ctrl-H', mac: 'Command-H'}, exec: () => openWinReplace() });
+    // Aceエディタ内部の検索機能を削除し、自作ダイアログに回す
+    if (editor.commands.commands.find) editor.commands.removeCommand('find');
+    if (editor.commands.commands.replace) editor.commands.removeCommand('replace');
+    
     editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => menuAction('save') });
     editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => menuAction('saveAs') });
     editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
     editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
 
-    // グローバルなキーボードキャプチャ
+    // ★ ブラウザの標準検索等を「絶対に」ブロックするキャプチャリング ★
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
-        const key = (e.key || '').toLowerCase();
-        if (key === 'f') { e.preventDefault(); e.stopPropagation(); openWinFind(); return false; } 
-        else if (key === 'h') { e.preventDefault(); e.stopPropagation(); openWinReplace(); return false; } 
-        else if (key === 's') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false; } 
-        else if (key === 'o') { e.preventDefault(); e.stopPropagation(); menuAction('open'); return false; } 
-        else if (key === 'p') { e.preventDefault(); e.stopPropagation(); printContent(); return false; }
-      } else if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
-    }, true);
+        // e.code を使ってキーボードの言語設定に関わらず物理キーで判定する
+        if (e.code === 'KeyF' || (e.key || '').toLowerCase() === 'f') {
+            e.preventDefault(); e.stopPropagation(); openWinFind(); return false;
+        } 
+        if (e.code === 'KeyH' || (e.key || '').toLowerCase() === 'h') {
+            e.preventDefault(); e.stopPropagation(); openWinReplace(); return false;
+        } 
+        if (e.code === 'KeyS' || (e.key || '').toLowerCase() === 's') {
+            e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false;
+        } 
+        if (e.code === 'KeyO' || (e.key || '').toLowerCase() === 'o') {
+            e.preventDefault(); e.stopPropagation(); menuAction('open'); return false;
+        } 
+        if (e.code === 'KeyP' || (e.key || '').toLowerCase() === 'p') {
+            e.preventDefault(); e.stopPropagation(); printContent(); return false;
+        }
+      } else if (e.key === 'F5') {
+        e.preventDefault(); insertTimeDate();
+      }
+    }, { capture: true, passive: false }); // capture:true で全イベントの最優先で横取りする
 
     // ==========================================
     // 検索・置換モーダル制御
@@ -480,7 +491,7 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      // 別のウィンドウがタブを受け取った場合、元のタブを削除
+      // 別のウィンドウがタブを「受け取った」と返事をしてきたら、元のウィンドウのタブを消去
       if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
         removeDraggedTabsLocally();
       }
@@ -532,8 +543,9 @@
       selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
+        // ★ 最後のタブを消した場合はウィンドウごと閉じる ★
         window.close(); 
-        // ウィンドウが閉じない環境(メインウィンドウなど)用
+        // もしブラウザの制限で window.close() が効かなかった場合のみ、200ms後に新しい無題タブを作る
         setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
@@ -558,44 +570,57 @@
           
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
-          e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
 
           // ★ プレビュー(ゴースト画像)の作成 ★
+          // 画面外に実態のあるHTML要素を作り、それをドラッグ用画像としてブラウザに認識させます
           ghostElement = document.createElement('div');
           ghostElement.style.position = 'absolute';
           ghostElement.style.top = '-10000px'; 
           ghostElement.style.left = '-10000px';
           ghostElement.style.background = '#ffffff'; 
-          ghostElement.style.border = '1px solid #0078d7';
-          ghostElement.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; 
-          ghostElement.style.padding = '10px';
-          ghostElement.style.fontFamily = 'Meiryo, sans-serif'; 
-          ghostElement.style.fontSize = '12px';
-          ghostElement.style.color = '#333'; 
-          ghostElement.style.width = '240px'; 
-          ghostElement.style.maxHeight = '120px';
+          ghostElement.style.border = '1px solid #999';
+          ghostElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)'; 
+          ghostElement.style.width = '350px'; 
           ghostElement.style.overflow = 'hidden'; 
-          ghostElement.style.borderRadius = '6px'; 
-          ghostElement.style.zIndex = '9999';
+          ghostElement.style.borderRadius = '8px'; 
+          ghostElement.style.zIndex = '99999';
           
-          const title = document.createElement('div'); 
-          title.style.fontWeight = 'bold'; 
-          title.style.marginBottom = '6px';
-          title.style.borderBottom = '1px solid #eee'; 
-          title.style.paddingBottom = '4px'; 
-          title.style.color = '#0067c0';
-          title.innerText = transferringTabIds.length > 1 ? `${transferringTabIds.length} 個のタブ` : tab.filename;
+          const ghostHeader = document.createElement('div');
+          ghostHeader.style.background = '#e8eaed';
+          ghostHeader.style.padding = '6px 10px 0';
+          ghostHeader.style.display = 'flex';
+          ghostHeader.style.borderBottom = '1px solid #ccc';
           
-          const contentPreview = document.createElement('div'); 
-          contentPreview.style.whiteSpace = 'pre-wrap'; 
-          contentPreview.style.opacity = '0.8';
-          contentPreview.innerText = tab.session.getValue().substring(0, 100) + '...';
+          transferringTabIds.forEach(tid => {
+              const t = tabs.find(x => x.id === tid);
+              if (t) {
+                  const gTab = document.createElement('div');
+                  gTab.style.background = '#fff';
+                  gTab.style.padding = '5px 15px';
+                  gTab.style.borderRadius = '6px 6px 0 0';
+                  gTab.style.fontSize = '12px';
+                  gTab.style.border = '1px solid #ccc';
+                  gTab.style.borderBottom = 'none';
+                  gTab.style.marginRight = '2px';
+                  gTab.innerText = t.filename;
+                  ghostHeader.appendChild(gTab);
+              }
+          });
           
-          ghostElement.appendChild(title); 
-          ghostElement.appendChild(contentPreview); 
+          const ghostBody = document.createElement('div');
+          ghostBody.style.padding = '12px';
+          ghostBody.style.fontSize = '13px';
+          ghostBody.style.fontFamily = 'Meiryo, monospace';
+          ghostBody.style.color = '#333';
+          ghostBody.style.whiteSpace = 'pre-wrap';
+          ghostBody.style.height = '150px';
+          ghostBody.innerText = tab.session.getValue().substring(0, 300) + '...';
+          
+          ghostElement.appendChild(ghostHeader);
+          ghostElement.appendChild(ghostBody);
           document.body.appendChild(ghostElement);
           
-          e.dataTransfer.setDragImage(ghostElement, 20, 20);
+          e.dataTransfer.setDragImage(ghostElement, 50, 30);
 
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
           await saveTransferData(currentDragTransferId, payload);
@@ -604,7 +629,8 @@
         
         tabEl.ondragover = (e) => {
           e.preventDefault(); e.stopPropagation(); document.getElementById('tab-bar').classList.remove('drag-over-empty'); e.dataTransfer.dropEffect = "move";
-          if (e.dataTransfer.types.includes('application/x-notepad-tabs') || e.dataTransfer.types.includes('text/plain')) {
+          // Chromeの仕様上 types の長さを調べることで、他ウィンドウからのドラッグでも青い線を出す
+          if (e.dataTransfer.types.length > 0) {
              if (selectedTabs.has(tab.id)) return; const rect = tabEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); tabEl.classList.toggle('drag-over-left', isLeft); tabEl.classList.toggle('drag-over-right', !isLeft);
           }
         };
@@ -620,10 +646,20 @@
 
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
+          // ★ 新しいウィンドウを開くかどうかの判定（遅延確認） ★
           if (currentDragTransferId) {
-             if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) {
-                 window.open('./index.html?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600');
-             }
+             const transferId = currentDragTransferId;
+             currentDragTransferId = null;
+             
+             // ドロップされてから0.15秒だけ待ち、まだデータベースにデータが残っているかチェックする
+             // もし別のウィンドウが受け取っていれば、そのデータは消去されているはず
+             setTimeout(async () => {
+                 const payload = await getTransferData(transferId);
+                 if (payload) {
+                     // 誰も受け取らなかった＝ウィンドウの外に出されたと判断し、新ウィンドウを開く
+                     window.open('./index.html?transfer=' + transferId, '_blank', 'width=800,height=600');
+                 }
+             }, 150);
           }
           draggedTabId = null; 
         };
@@ -642,30 +678,24 @@
     const tabBar = document.getElementById('tab-bar');
     tabBar.ondragover = (e) => { 
         e.preventDefault(); 
-        if (e.dataTransfer.types.includes('application/x-notepad-tabs') || e.dataTransfer.types.includes('text/plain') || e.dataTransfer.types.includes('Files')) {
-            tabBar.classList.add('drag-over-empty'); 
-        }
+        if (e.dataTransfer.types.length > 0) { tabBar.classList.add('drag-over-empty'); }
     };
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
-
-    editor.on('focus', () => { if (selectedTabs.size > 1) { selectedTabs.clear(); selectedTabs.add(activeTabId); renderTabs(); } });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) {
-          const txt = e.dataTransfer.getData('text/plain');
-          if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1];
-      }
-      if (!transferId) {
           transferId = localStorage.getItem('notepad_last_transfer_id');
       }
       
       if (transferId && transferId !== currentDragTransferId) {
+        // ★ 他のウィンドウからタブを受け取る処理 ★
         const payload = await getTransferData(transferId);
         if (payload && Array.isArray(payload)) {
+          // 元のウィンドウに受信完了を通知
           bc.postMessage({ type: 'tabs-adopted', transferId });
           await deleteTransferData(transferId);
           
@@ -683,7 +713,7 @@
           renderTabs(); if(lastId) switchTab(lastId); 
         }
       } else if (transferringTabIds.length > 0) {
-        // 同一ウィンドウ内の並び替え
+        // ★ 同一ウィンドウ内でのタブ並び替え（複数選択対応） ★
         let toIndex = tabs.length;
         let isLeft = true;
         if (targetEl && targetTabId) { 
@@ -699,8 +729,10 @@
           if (idx !== -1) { movedTabs.push(tabs[idx]); } 
         });
         
+        // 移動するタブを一旦配列から取り除く
         tabs = tabs.filter(t => !transferringTabIds.includes(t.id));
         
+        // 取り除いた後の新しいインデックスを計算
         if (targetTabId) { 
           const newTargetIdx = tabs.findIndex(t => t.id === targetTabId);
           if (newTargetIdx !== -1) {
