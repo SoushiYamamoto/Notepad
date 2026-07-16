@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>メモ帳 - 無題</title>
+  
+  <!-- PWAマニフェストの読み込み -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- ローカルのFaviconを読み込み -->
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="favicon96.png">
+  
+  <style>
+    body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
+    
+    /* メニューバー周り */
+    .menu-bar { background: #f3f3f3; display: flex; font-size: 11px; border-bottom: 1px solid #ccc; user-select: none; position: relative; z-index: 1000; }
+    .menu-container { position: relative; }
+    .menu-item-btn { padding: 5px 12px; cursor: default; }
+    .menu-item-btn:hover, .menu-item-btn.active { background: #e5e5e5; }
+    
+    /* ドロップダウンメニュー */
+    .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f2f2f2; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); min-width: 240px; padding: 2px 0; }
+    .dropdown.show { display: block; }
+    .dropdown-item { padding: 4px 15px 4px 25px; display: flex; justify-content: space-between; align-items: center; cursor: default; position: relative; white-space: nowrap; font-size: 11px; color: #000; }
+    .dropdown-item:hover { background: #91c9f7; }
+    .dropdown-divider { height: 1px; background: #ccc; margin: 3px 0; }
+    .shortcut { color: #666; margin-left: 30px; font-size: 10px; }
+    
+    /* サブメニュー */
+    .has-submenu::after { content: "▶"; position: absolute; right: 8px; font-size: 8px; top: 7px; color: #666; }
+    .submenu { display: none; position: absolute; top: 0; left: 100%; background: #f2f2f2; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); min-width: 180px; padding: 2px 0; margin-left: -1px; }
+    .dropdown-item:hover > .submenu { display: block; }
+
+    /* 無効なメニュー（グレーアウト） */
+    .dropdown-item.disabled { color: #a0a0a0; pointer-events: none; }
+    .dropdown-item.disabled .shortcut { color: #b0b0b0; }
+
+    /* エディタとステータスバー */
+    #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
+    
+    .status-bar { background: #f3f3f3; border-top: 1px solid #ccc; padding: 2px 15px; font-size: 11px; display: flex; justify-content: flex-end; gap: 30px; color: #333; user-select: none; }
+    .clickable-status { cursor: pointer; color: #000; padding: 0 5px; }
+    .clickable-status:hover { background: #e5e5e5; }
+    
+    #fileInputFallback { display: none; }
+
+    /* ★ バージョン情報用モーダル（ダイアログ）のスタイル ★ */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4); z-index: 2000;
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; border: 1px solid #999; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      padding: 15px 25px; min-width: 300px; font-size: 12px; font-family: 'Segoe UI', Meiryo, sans-serif;
+    }
+    .modal-content h3 { margin-top: 0; font-size: 16px; font-weight: normal; color: #003399; }
+    .modal-content p { line-height: 1.5; color: #333; }
+    .modal-content a { color: #0066cc; text-decoration: none; }
+    .modal-content a:hover { text-decoration: underline; }
+    .modal-buttons { text-align: right; margin-top: 20px; }
+    .modal-buttons button {
+      padding: 4px 20px; font-size: 12px; cursor: pointer;
+      background: #e1e1e1; border: 1px solid #adadad;
+    }
+    .modal-buttons button:hover { background: #e5f1fb; border-color: #0078d7; }
+  </style>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ext-searchbox.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ext-language_tools.min.js"></script>
+  <script src="https://unpkg.com/encoding-japanese@2.0.0/encoding.min.js"></script>
+</head>
+<body>
+
+  <!-- バージョン情報モーダル -->
+  <div id="aboutModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>バージョン情報</h3>
+      <p>ブラウザ上で動くメモ帳アプリです。</p>
+      <p>
+        <a target="_blank" href="https://icons8.com/icon/cHos0K0vg9Ok/notepad">メモ帳</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+      </p>
+      <div class="modal-buttons">
+        <button onclick="closeAboutModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-bar">
+    <div class="menu-container">
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-file', event)" onmouseenter="handleMenuHover('menu-file', event)">ファイル(F)</div>
+      <div id="menu-file" class="dropdown">
+        <div class="dropdown-item" onclick="menuAction('new')"><span>新規(N)</span><span class="shortcut">Ctrl+N</span></div>
+        <div class="dropdown-item" onclick="menuAction('open')"><span>開く(O)...</span><span class="shortcut">Ctrl+O</span></div>
+        <div class="dropdown-item" id="menu-save" onclick="menuAction('save')"><span id="menu-save-text">保存(S)</span><span class="shortcut">Ctrl+S</span></div>
+        <div class="dropdown-item" onclick="menuAction('saveAs')"><span>名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="window.print(); closeMenus();"><span>印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="window.close()"><span>終了(X)</span></div>
+      </div>
+    </div>
+
+    <div class="menu-container">
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-edit', event)" onmouseenter="handleMenuHover('menu-edit', event)">編集(E)</div>
+      <div id="menu-edit" class="dropdown">
+        <div class="dropdown-item" id="menu-undo" onclick="editor.undo(); closeMenus();"><span>元に戻す(U)</span><span class="shortcut">Ctrl+Z</span></div>
+        <div class="dropdown-item" id="menu-redo" onclick="editor.redo(); closeMenus();"><span>やり直し(R)</span><span class="shortcut">Ctrl+Y</span></div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" id="menu-cut" onclick="execCmd('cut')"><span>切り取り(T)</span><span class="shortcut">Ctrl+X</span></div>
+        <div class="dropdown-item" id="menu-copy" onclick="execCmd('copy')"><span>コピー(C)</span><span class="shortcut">Ctrl+C</span></div>
+        <div class="dropdown-item" onclick="execCmd('paste')"><span>貼り付け(P)</span><span class="shortcut">Ctrl+V</span></div>
+        <div class="dropdown-item" id="menu-delete" onclick="editor.removeWordRight(); closeMenus();"><span>削除(L)</span><span class="shortcut">Del</span></div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="editor.execCommand('find'); closeMenus();"><span>検索(F)...</span><span class="shortcut">Ctrl+F</span></div>
+        <div class="dropdown-item" onclick="editor.execCommand('replace'); closeMenus();"><span>置換(R)...</span><span class="shortcut">Ctrl+H</span></div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="editor.selectAll(); closeMenus();"><span>すべて選択(A)</span><span class="shortcut">Ctrl+A</span></div>
+        <div class="dropdown-item" onclick="insertTimeDate()"><span>日付と時刻(D)</span><span class="shortcut">F5</span></div>
+      </div>
+    </div>
+
+    <div class="menu-container">
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-format', event)" onmouseenter="handleMenuHover('menu-format', event)">書式(O)</div>
+      <div id="menu-format" class="dropdown">
+        <div class="dropdown-item" onclick="toggleWordWrap()" id="menu-wrap-check">右端で折り返す(W)</div>
+        <div class="dropdown-item" onclick="menuAction('font')">フォント(F)...</div>
+      </div>
+    </div>
+
+    <div class="menu-container">
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-view', event)" onmouseenter="handleMenuHover('menu-view', event)">表示(V)</div>
+      <div id="menu-view" class="dropdown">
+        <div class="dropdown-item has-submenu">ズーム(Z)
+          <div class="submenu">
+            <div class="dropdown-item" onclick="changeZoom(1)"><span>拡大(I)</span><span class="shortcut">Ctrl+Plus</span></div>
+            <div class="dropdown-item" onclick="changeZoom(-1)"><span>縮小(O)</span><span class="shortcut">Ctrl+Minus</span></div>
+            <div class="dropdown-item" onclick="changeZoom(0)"><span>既定の倍率に戻す(R)</span><span class="shortcut">Ctrl+0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-container">
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-help', event)" onmouseenter="handleMenuHover('menu-help', event)">ヘルプ(H)</div>
+      <div id="menu-help" class="dropdown">
+        <!-- ★ alert()から自作モーダルの呼び出しに変更 ★ -->
+        <div class="dropdown-item" onclick="showAboutModal()">バージョン情報(A)</div>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInputFallback" onchange="handleFileSelectFallback(event)">
+  <div id="editor"></div>
+  
+  <div class="status-bar">
+    <div id="pos-info">1 行, 1 列</div>
+    <div id="mode-info">TEXT</div>
+    <div id="enc-info" class="clickable-status" onclick="switchEncoding()" title="クリックで文字コードを変更">UTF-8</div>
+    <div>Windows (CRLF)</div>
+  </div>
+
+  <script>
+    // PWAインストール要件のためのService Worker登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+
+    ace.require("ace/ext/language_tools");
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/textmate");
+    editor.setFontSize(12);
+    editor.setShowPrintMargin(false);
+    editor.setOptions({
+      enableBasicAutocompletion: true,
+      enableLiveAutocompletion: true,
+      enableSnippets: true
+    });
+    
+    window.addEventListener('resize', () => editor.resize());
+    
+    var fileHandle = null;
+    var currentFilename = "無題";
+    var currentBytes = null;
+    var currentEncoding = 'UTF8';
+    var isWordWrap = false;
+    var currentFontSize = 12;
+    var isDirty = false;
+    
+    editor.on("input", function() {
+      if(!editor.session.getUndoManager().isClean()) {
+        isDirty = true;
+        document.title = `*メモ帳 - ${currentFilename}`;
+      } else {
+        isDirty = false;
+        document.title = `メモ帳 - ${currentFilename}`;
+      }
+    });
+
+    // ----- バージョン情報モーダルの制御 -----
+    function showAboutModal() {
+      closeMenus();
+      document.getElementById('aboutModal').style.display = 'flex';
+    }
+
+    function closeAboutModal() {
+      document.getElementById('aboutModal').style.display = 'none';
+    }
+
+    // ----- メニューのグレーアウト（有効/無効）制御 -----
+    function updateMenuStates() {
+      const um = editor.session.getUndoManager();
+      const hasSelection = !editor.selection.isEmpty();
+
+      document.getElementById('menu-undo').classList.toggle('disabled', !um.hasUndo());
+      document.getElementById('menu-redo').classList.toggle('disabled', !um.hasRedo());
+      document.getElementById('menu-cut').classList.toggle('disabled', !hasSelection);
+      document.getElementById('menu-copy').classList.toggle('disabled', !hasSelection);
+      document.getElementById('menu-delete').classList.toggle('disabled', !hasSelection);
+      document.getElementById('menu-save-text').innerText = isDirty ? "上書き保存(S)" : "保存(S)";
+    }
+
+    var isAnyMenuOpen = false;
+
+    function handleMenuClick(id, event) {
+      let target = document.getElementById(id);
+      let wasOpen = target.classList.contains('show');
+      closeMenus();
+      if (!wasOpen) {
+        updateMenuStates();
+        target.classList.add('show');
+        event.currentTarget.classList.add('active');
+        isAnyMenuOpen = true;
+      } else {
+        isAnyMenuOpen = false;
+      }
+      event.stopPropagation();
+    }
+
+    function handleMenuHover(id, event) {
+      if (isAnyMenuOpen) {
+        let target = document.getElementById(id);
+        if (!target.classList.contains('show')) {
+          closeMenusWithoutResetState();
+          updateMenuStates();
+          target.classList.add('show');
+          event.currentTarget.classList.add('active');
+        }
+      }
+    }
+
+    function closeMenus() {
+      closeMenusWithoutResetState();
+      isAnyMenuOpen = false;
+    }
+
+    function closeMenusWithoutResetState() {
+      document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show'));
+      document.querySelectorAll('.menu-item-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.menu-container')) closeMenus();
+      
+      // モーダルの外側をクリックしたら閉じる処理
+      if (e.target === document.getElementById('aboutModal')) {
+        closeAboutModal();
+      }
+    });
+
+    async function menuAction(action) {
+      closeMenus();
+      if (action === 'new') {
+        if (isDirty && !confirm("変更が保存されていません。破棄して新規作成しますか？")) return;
+        editor.setValue("");
+        editor.session.getUndoManager().markClean();
+        fileHandle = null;
+        currentFilename = "無題";
+        currentBytes = null;
+        updateMode(currentFilename);
+        currentEncoding = "UTF8";
+        updateTitleAndStatus();
+      } else if (action === 'open') {
+        if (isDirty && !confirm("変更が保存されていません。破棄してファイルを開きますか？")) return;
+        await openFileWithAPI();
+      } else if (action === 'save') {
+        await executeSave();
+      } else if (action === 'saveAs') {
+        await executeSaveAs();
+      } else if (action === 'font') {
+        let size = prompt("フォントサイズを数値(px)で入力してください:", currentFontSize);
+        if (size && !isNaN(size)) {
+          currentFontSize = parseInt(size);
+          editor.setFontSize(currentFontSize);
+        }
+      }
+    }
+
+    async function openFileWithAPI() {
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({ multiple: false });
+          fileHandle = handle;
+          const file = await fileHandle.getFile();
+          await loadFileProcess(file);
+        } catch (err) {
+          console.log('キャンセルされました:', err);
+        }
+      } else {
+        document.getElementById('fileInputFallback').click();
+      }
+    }
+
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', async e => {
+      e.preventDefault();
+      if (isDirty && !confirm("変更が保存されていません。破棄してドロップされたファイルを開きますか？")) return;
+      const items = e.dataTransfer.items;
+      if (items && items[0] && items[0].kind === 'file') {
+        if (typeof items[0].getAsFileSystemHandle === 'function') {
+          try {
+            const handle = await items[0].getAsFileSystemHandle();
+            if (handle.kind === 'file') {
+              fileHandle = handle;
+              const file = await handle.getFile();
+              await loadFileProcess(file);
+              return;
+            }
+          } catch (err) {}
+        }
+        await loadFileProcess(items[0].getAsFile());
+      }
+    });
+
+    function handleFileSelectFallback(e) {
+      const file = e.target.files[0];
+      if (file) {
+        fileHandle = null;
+        loadFileProcess(file);
+      }
+      e.target.value = '';
+    }
+
+    async function loadFileProcess(file) {
+      currentFilename = file.name;
+      const arrayBuffer = await file.arrayBuffer();
+      currentBytes = new Uint8Array(arrayBuffer);
+      const detected = Encoding.detect(currentBytes);
+      currentEncoding = detected || 'UTF8';
+      decodeAndShow();
+      updateMode(currentFilename);
+      editor.session.getUndoManager().markClean();
+      updateTitleAndStatus();
+    }
+
+    async function executeSave() {
+      const text = editor.getValue();
+      const unicodeArray = Encoding.stringToCode(text);
+      const outArray = Encoding.convert(unicodeArray, { to: currentEncoding, from: 'UNICODE' });
+      const uint8Array = new Uint8Array(outArray);
+
+      if (fileHandle) {
+        try {
+          const writable = await fileHandle.createWritable();
+          await writable.write(uint8Array);
+          await writable.close();
+          editor.session.getUndoManager().markClean();
+          updateTitleAndStatus();
+          return;
+        } catch (err) {
+          console.log("上書き保存エラー:", err);
+          fileHandle = null;
+        }
+      }
+      await saveWithPicker(uint8Array);
+    }
+
+    async function executeSaveAs() {
+      const text = editor.getValue();
+      const unicodeArray = Encoding.stringToCode(text);
+      const outArray = Encoding.convert(unicodeArray, { to: currentEncoding, from: 'UNICODE' });
+      const uint8Array = new Uint8Array(outArray);
+      await saveWithPicker(uint8Array);
+    }
+
+    async function saveWithPicker(uint8Array) {
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({ suggestedName: currentFilename });
+          fileHandle = handle;
+          currentFilename = handle.name;
+          const writable = await handle.createWritable();
+          await writable.write(uint8Array);
+          await writable.close();
+          editor.session.getUndoManager().markClean();
+          updateTitleAndStatus();
+          updateMode(currentFilename);
+        } catch (err) {
+          console.log('保存キャンセル:', err);
+        }
+      } else {
+        let name = prompt("保存するファイル名を入力してください", currentFilename);
+        if (!name) return;
+        currentFilename = name;
+        const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = currentFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        editor.session.getUndoManager().markClean();
+        updateTitleAndStatus();
+        updateMode(currentFilename);
+      }
+    }
+
+    function decodeAndShow() {
+      if (!currentBytes) return;
+      const unicodeArray = Encoding.convert(currentBytes, { to: 'UNICODE', from: currentEncoding });
+      editor.setValue(Encoding.codeToString(unicodeArray), -1);
+      updateTitleAndStatus();
+    }
+
+    function switchEncoding() {
+      const encs = ['UTF8', 'SJIS', 'EUCJP', 'UTF16'];
+      let idx = encs.indexOf(currentEncoding);
+      currentEncoding = encs[(idx + 1) % encs.length];
+      if (currentBytes) {
+        decodeAndShow();
+      } else {
+        updateTitleAndStatus();
+      }
+    }
+
+    function insertTimeDate() {
+      const now = new Date();
+      const str = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString().replace(/\//g, '/');
+      editor.insert(str);
+      closeMenus();
+    }
+
+    function toggleWordWrap() {
+      isWordWrap = !isWordWrap;
+      editor.getSession().setUseWrapMode(isWordWrap);
+      document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + "右端で折り返す(W)";
+      closeMenus();
+    }
+
+    function changeZoom(dir) {
+      if (dir === 0) currentFontSize = 12;
+      else currentFontSize += (dir * 2);
+      if(currentFontSize < 6) currentFontSize = 6;
+      editor.setFontSize(currentFontSize);
+      closeMenus();
+    }
+
+    async function execCmd(cmd) {
+      closeMenus();
+      if(cmd === 'copy') {
+        const text = editor.getSelectedText();
+        if(text) await navigator.clipboard.writeText(text);
+      } else if (cmd === 'cut') {
+        const text = editor.getSelectedText();
+        if(text) {
+          await navigator.clipboard.writeText(text);
+          editor.insert("");
+        }
+      } else if (cmd === 'paste') {
+        try {
+          const text = await navigator.clipboard.readText();
+          editor.insert(text);
+        } catch(e) {
+          alert("ブラウザの仕様により貼り付けられません。Ctrl+Vを使用してください。");
+        }
+      }
+    }
+
+    function updateMode(filename) {
+      let mode = "ace/mode/text";
+      if (filename.endsWith('.js')) mode = "ace/mode/javascript";
+      else if (filename.endsWith('.html') || filename.endsWith('.htm')) mode = "ace/mode/html";
+      else if (filename.endsWith('.json')) mode = "ace/mode/json";
+      else if (filename.endsWith('.css')) mode = "ace/mode/css";
+      else if (filename.endsWith('.ini')) mode = "ace/mode/ini";
+      editor.session.setMode(mode);
+      document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
+    }
+
+    function updateTitleAndStatus() {
+      isDirty = !editor.session.getUndoManager().isClean();
+      document.title = (isDirty ? "*" : "") + `メモ帳 - ${currentFilename}`;
+      document.getElementById('enc-info').innerText = currentEncoding;
+    }
+
+    editor.selection.on('changeCursor', () => {
+      const pos = editor.getCursorPosition();
+      document.getElementById('pos-info').innerText = `${pos.row + 1} 行, ${pos.column + 1} 列`;
+    });
+    
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); menuAction('save'); }
+      if (e.ctrlKey && e.key === 'o') { e.preventDefault(); menuAction('open'); }
+      if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
+    });
+
+    if ('launchQueue' in window) {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (!launchParams.files || launchParams.files.length === 0) return;
+        const handle = launchParams.files[0];
+        if (handle.kind === 'file') {
+          fileHandle = handle;
+          const file = await handle.getFile();
+          await loadFileProcess(file);
+        }
+      });
+    }
+
+    updateTitleAndStatus();
+  </script>
+</body>
+</html>

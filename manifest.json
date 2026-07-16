@@ -1,0 +1,39 @@
+{
+  "name": "メモ帳",
+  "short_name": "メモ帳",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#f3f3f3",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "favicon16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "text/plain": [".txt", ".csv", ".md", ".log"],
+        "text/html": [".html", ".htm"],
+        "application/json": [".json"],
+        "text/javascript": [".js"],
+        "text/css": [".css"],
+        "text/ini": [".ini"]
+      }
+    }
+  ]
+}
