@@ -10,37 +10,39 @@
   <link rel="icon" type="image/png" sizes="96x96" href="favicon96.png">
   
   <style>
-    :root {
-      /* 全体の統一フォントサイズ */
-      --ui-font-size: 13px; 
-    }
+    :root { --ui-font-size: 13px; }
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
-    /* ★ タブバーのスタイル (Windows 11風) ★ */
+    /* ★ タブバーのスタイル (タイトルバーとの一体化対応) ★ */
     .tab-bar {
-      display: flex; background: #e8eaed; padding: 5px 5px 0 5px; 
-      border-bottom: 1px solid #ccc; /* 基準となる下線 */
+      display: flex; background: #e8eaed; 
+      /* OSのタイトルバー領域を考慮したパディング（PWA WCO対応） */
+      padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px));
+      border-bottom: 1px solid #ccc;
       align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none;
+      /* 余白をドラッグしてウィンドウを動かせるようにする */
+      -webkit-app-region: drag;
     }
-    .tab-bar::-webkit-scrollbar { height: 4px; }
+    .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     
     .tab {
       display: flex; align-items: center; justify-content: space-between;
       min-width: 120px; max-width: 250px; 
-      /* 下のborderを隠すためにpaddingとmarginを調整 */
       padding: 6px 10px 7px 10px; margin-right: 2px; margin-bottom: -1px;
       background: #f3f3f3; 
       border: 1px solid transparent; border-bottom: 1px solid transparent;
       border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default;
       transition: background 0.2s; white-space: nowrap; overflow: hidden;
+      /* タブ自身はドラッグで移動しない（クリック可能にする） */
+      -webkit-app-region: no-drag;
     }
     .tab:hover { background: #e0e0e0; }
     .tab.active {
       background: #fff; color: #000; 
       border-color: #ccc; 
-      border-bottom: 1px solid #fff; /* 下のメニューバーの白と繋げる */
+      border-bottom: 1px solid #fff; 
       z-index: 2; position: relative;
     }
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
@@ -55,6 +57,7 @@
       width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
       margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer;
       font-size: 18px; color: #555;
+      -webkit-app-region: no-drag;
     }
     .add-tab-btn:hover { background: #d0d0d0; }
 
@@ -91,7 +94,6 @@
     
     #fileInputFallback { display: none; }
 
-    /* バージョン情報用モーダル */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2000; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-content h3 { margin-top: 0; font-size: 18px; font-weight: normal; color: #222; }
@@ -101,6 +103,19 @@
     .modal-buttons { text-align: right; margin-top: 25px; }
     .modal-buttons button { padding: 6px 24px; font-size: var(--ui-font-size); cursor: pointer; background: #e5e5e5; border: 1px solid #ccc; border-radius: 4px; color: #000; }
     .modal-buttons button:hover { background: #d5d5d5; }
+
+    /* ★ 印刷時専用スタイル (GUIを消してテキストのみにする) ★ */
+    @media print {
+      body, html { height: auto; overflow: visible; background: #fff; }
+      .tab-bar, .menu-bar, .status-bar, #editor, .modal-overlay { display: none !important; }
+      #print-area { 
+        display: block !important; 
+        font-family: 'Segoe UI', Meiryo, monospace; 
+        font-size: 11pt; color: #000; 
+        white-space: pre-wrap; word-wrap: break-word; 
+      }
+    }
+    #print-area { display: none; }
   </style>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
@@ -123,7 +138,6 @@
     </div>
   </div>
 
-  <!-- タブバー -->
   <div class="tab-bar" id="tab-bar">
     <div class="add-tab-btn" onclick="menuAction('new')" title="新しいタブを追加">+</div>
   </div>
@@ -141,7 +155,7 @@
         <div id="recent-files-container"></div>
         <div class="dropdown-divider"></div>
         
-        <div class="dropdown-item" onclick="window.print(); closeMenus();"><span>印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
+        <div class="dropdown-item" onclick="printContent()"><span>印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
         <div class="dropdown-divider"></div>
         <div class="dropdown-item" onclick="window.close()"><span>終了(X)</span></div>
       </div>
@@ -190,7 +204,8 @@
     </div>
   </div>
 
-  <input type="file" id="fileInputFallback" onchange="handleFileSelectFallback(event)">
+  <!-- 複数ファイルの選択を許可するよう multiple 属性を追加 -->
+  <input type="file" id="fileInputFallback" onchange="handleFileSelectFallback(event)" multiple>
   <div id="editor"></div>
   
   <div class="status-bar">
@@ -213,7 +228,6 @@
       });
     }
 
-    // エディタの初期化 (フォントサイズ統一: 13px)
     ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/textmate");
@@ -221,14 +235,13 @@
     editor.setOptions({ enableBasicAutocompletion: true, enableLiveAutocompletion: true, enableSnippets: true });
     window.addEventListener('resize', () => editor.resize());
     
-    // グローバル設定
     var isWordWrap = false;
     var currentFontSize = 13;
     var defaultFontSize = 13;
     editor.setFontSize(currentFontSize);
 
     // ==========================================
-    // ★ タブ管理システム（D&D並び替え対応）
+    // タブ管理システム
     // ==========================================
     let tabs = [];
     let activeTabId = null;
@@ -288,7 +301,7 @@
       tabs.splice(tabIndex, 1);
 
       if (tabs.length === 0) {
-        createTab(); // すべて閉じたら新しい空タブを作る
+        createTab();
       } else {
         if (activeTabId === id) {
           const nextIndex = Math.max(0, tabIndex - 1);
@@ -313,7 +326,6 @@
         const tabEl = document.createElement('div');
         tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
         
-        // ★ タブの並び替え（ドラッグ＆ドロップ）処理
         tabEl.draggable = true;
         tabEl.ondragstart = (e) => {
           draggedTabId = tab.id;
@@ -420,13 +432,14 @@
       const files = await getRecentFiles();
       
       if (files.length === 0) {
-        container.innerHTML = '<div class="dropdown-item disabled">履歴がありません</div>';
+        container.innerHTML = '<div class="dropdown-item disabled" style="padding-left:15px;">履歴がありません</div>';
         return;
       }
       
       files.forEach((f, index) => {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
+        item.style.paddingLeft = '15px';
         
         const nameSpan = document.createElement('span');
         nameSpan.innerText = f.name;
@@ -547,7 +560,7 @@
       const tab = getActiveTab();
       
       if (action === 'new') {
-        createTab(); // 新しいタブを開く
+        createTab();
       } else if (action === 'open') {
         await openFileWithAPI();
       } else if (action === 'save') {
@@ -564,48 +577,59 @@
       }
     }
 
+    // ★ 複数ファイルを選択して開けるよう multiple に対応 ★
     async function openFileWithAPI() {
       if (window.showOpenFilePicker) {
         try {
-          const [handle] = await window.showOpenFilePicker({ multiple: false });
-          const file = await handle.getFile();
-          await loadFileProcess(file, handle);
-          await addRecentFile(file.name, handle);
+          const handles = await window.showOpenFilePicker({ multiple: true });
+          for (const handle of handles) {
+            const file = await handle.getFile();
+            await loadFileProcess(file, handle);
+            await addRecentFile(file.name, handle);
+          }
         } catch (err) {}
       } else {
         document.getElementById('fileInputFallback').click();
       }
     }
 
+    // ★ ドラッグ＆ドロップで複数ファイルを開けるようにループ化 ★
     window.addEventListener('dragover', e => e.preventDefault());
     window.addEventListener('drop', async e => {
       e.preventDefault();
       const items = e.dataTransfer.items;
-      if (items && items[0] && items[0].kind === 'file') {
-        if (typeof items[0].getAsFileSystemHandle === 'function') {
-          try {
-            const handle = await items[0].getAsFileSystemHandle();
-            if (handle.kind === 'file') {
-              const file = await handle.getFile();
-              await loadFileProcess(file, handle);
-              await addRecentFile(file.name, handle);
-              return;
-            }
-          } catch (err) {}
+      if (!items) return;
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          if (typeof items[i].getAsFileSystemHandle === 'function') {
+            try {
+              const handle = await items[i].getAsFileSystemHandle();
+              if (handle.kind === 'file') {
+                const file = await handle.getFile();
+                await loadFileProcess(file, handle);
+                await addRecentFile(file.name, handle);
+                continue;
+              }
+            } catch (err) {}
+          }
+          const file = items[i].getAsFile();
+          if (file) await loadFileProcess(file, null);
         }
-        await loadFileProcess(items[0].getAsFile(), null);
       }
     });
 
+    // 複数ファイルのフォールバック
     function handleFileSelectFallback(e) {
-      const file = e.target.files[0];
-      if (file) loadFileProcess(file, null);
+      const files = e.target.files;
+      if (!files) return;
+      for (let i = 0; i < files.length; i++) {
+        loadFileProcess(files[i], null);
+      }
       e.target.value = '';
     }
 
-    // ★ ファイル読み込み処理（重複防止対応）
     async function loadFileProcess(file, handle) {
-      // 既に同じファイルが開かれていないかチェック
       for (let tab of tabs) {
         let isSame = false;
         if (handle && tab.fileHandle && tab.fileHandle.isSameEntry) {
@@ -613,12 +637,10 @@
             if (await handle.isSameEntry(tab.fileHandle)) isSame = true;
           } catch(e) {}
         } else if (tab.filename === file.name) {
-          // FileHandleがない場合（フォールバック時）は名前で簡易判定
           isSame = true;
         }
-
         if (isSame) {
-          switchTab(tab.id); // 既存のタブに切り替えて終了
+          switchTab(tab.id);
           return;
         }
       }
@@ -731,6 +753,26 @@
       updateTitleAndStatus();
     }
 
+    // ★ 印刷の中身のみ表示する関数を追加 ★
+    function printContent() {
+      closeMenus();
+      const tab = getActiveTab();
+      if (!tab) return;
+      
+      let printDiv = document.getElementById('print-area');
+      if (!printDiv) {
+        printDiv = document.createElement('div');
+        printDiv.id = 'print-area';
+        document.body.appendChild(printDiv);
+      }
+      // 折り返しの設定に合わせて印刷にも反映
+      printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre";
+      printDiv.innerText = tab.session.getValue();
+      
+      // ブラウザの印刷ダイアログを起動
+      window.print();
+    }
+
     function insertTimeDate() {
       const now = new Date();
       const str = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString().replace(/\//g, '/');
@@ -802,6 +844,7 @@
     document.addEventListener('keydown', e => {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); menuAction('save'); }
       if (e.ctrlKey && e.key === 'o') { e.preventDefault(); menuAction('open'); }
+      if (e.ctrlKey && e.key === 'p') { e.preventDefault(); printContent(); }
       if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
     });
 

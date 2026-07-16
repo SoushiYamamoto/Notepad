@@ -2,8 +2,9 @@
   "name": "メモ帳",
   "short_name": "メモ帳",
   "start_url": "./index.html",
+  "display_override": ["window-controls-overlay"],
   "display": "standalone",
-  "theme_color": "#f3f3f3",
+  "theme_color": "#e8eaed",
   "background_color": "#ffffff",
   "icons": [
     {
