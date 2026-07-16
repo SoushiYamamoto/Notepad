@@ -128,6 +128,7 @@
 
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
+  <!-- 検索・置換ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
@@ -337,8 +338,8 @@
     // ==========================================
     // ウィンドウ間連携用 (ハンドシェイク設計)
     // ==========================================
-    let activeTransfers = new Map(); // 現在このウィンドウでドラッグしているタブID
-    let localAdoptedTids = new Set(); // 確実に受け取りが完了した転送ID
+    let activeTransfers = new Map(); 
+    let localAdoptedTids = new Set(); 
     let isDragging = false; 
     let currentDragTid = null;
     let ghostElement = null;
@@ -348,9 +349,8 @@
       console.log('[DEBUG] BC Message received:', event.data);
       if (event.data.type === 'tabs-adopted') {
         const tid = event.data.transferId;
-        localAdoptedTids.add(tid); // 他のウィンドウが受け取ったことを記録
+        localAdoptedTids.add(tid); 
         
-        // もし自分のウィンドウでドラッグしていたタブなら、削除する
         if (activeTransfers.has(tid)) {
           console.log('[DEBUG] Remote adoption confirmed. Removing tabs locally.');
           const tids = activeTransfers.get(tid);
@@ -393,7 +393,7 @@
 
       if (tabs.length === 0) { 
         console.log('[DEBUG] All tabs closed. Creating a blank tab to prevent crash.');
-        // ★ 絶対に window.close() は呼ばない ★
+        // ★ 絶対に window.close() を呼ばず、代わりに無題タブを作成して生き残る ★
         createTab(); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
@@ -463,9 +463,12 @@
               e.dataTransfer.setDragImage(ghostElement, 40, 15);
           } catch(err) {}
 
-          const payload = movingTabs.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes ? Array.from(t.rawBytes) : null }; });
+          // ★ `rawBytes` を削除した軽量で安全なペイロードを作成し、確実に保存を待つ ★
+          const payload = movingTabs.map(tid => { 
+             const t = tabs.find(x => x.id === tid); 
+             return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: null }; 
+          });
           
-          // ★ 必ず保存完了を待ってから半透明化する ★
           await saveTransferData(currentDragTid, payload);
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
@@ -481,15 +484,14 @@
         
         tabEl.ondragend = (e) => {
           console.log('[DEBUG] dragend on tab:', tab.id);
-          
           if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
-          const tid = currentDragTid;
-          currentDragTid = null;
-          
-          if (tid) {
-             // 400ms 待ち、確実にどこかが「受け取った」か判定する
+          if (currentDragTid) {
+             const tid = currentDragTid;
+             currentDragTid = null;
+             
+             // ★ 400ms待ち、他のウィンドウから「受け取った」合図がなければ新ウィンドウ作成 ★
              setTimeout(() => {
                  const isAdopted = localAdoptedTids.has(tid);
                  console.log('[DEBUG] After 400ms wait. isAdopted:', isAdopted, 'tid:', tid);
@@ -533,6 +535,7 @@
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
+      console.log('[DEBUG] renderTabs completed. selectedTabs:', Array.from(selectedTabs));
     }
 
     const tabBar = document.getElementById('tab-bar');
@@ -543,7 +546,7 @@
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
-    // ★ ウィンドウのどこにドロップしてもタブとして受け入れる ★
+    // ★ ウィンドウ全体をドロップ可能領域とし、余計なウィンドウが開くのを防ぐ ★
     document.body.ondragover = (e) => {
       if (e.dataTransfer.types.length > 0) { e.preventDefault(); }
     };
@@ -554,6 +557,7 @@
     };
 
     document.addEventListener('mousedown', e => {
+      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
       
       if (!isDragging && !e.target.closest('.tab') && !e.target.closest('.win-dialog') && !e.target.closest('.menu-container') && selectedTabs.size > 1) {
@@ -619,8 +623,9 @@
           
           selectedTabs.clear(); let lastId = null;
           payload.forEach(data => {
-            const rawBytes = data.rawBytes ? new Uint8Array(data.rawBytes) : null;
-            const id = createTab(data.filename, data.content, data.encoding, data.handle, rawBytes, true); 
+            // 文字列から rawBytes を復元する
+            const rawBytes = data.content ? new Uint8Array(Encoding.convert(Encoding.stringToCode(data.content), { to: data.encoding, from: 'UNICODE' })) : null;
+            const id = createTab(data.filename, data.content, data.encoding, null, rawBytes, true); 
             const newTab = tabs.find(t => t.id === id); if (data.isDirty && newTab) newTab.isDirty = true;
             const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
             selectedTabs.add(id); lastId = id;
@@ -651,7 +656,6 @@
         request.onupgradeneeded = (e) => {
           let database = e.target.result;
           if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings');
-          if (!database.objectStoreNames.contains('transfers')) database.createObjectStore('transfers');
         };
         request.onsuccess = (e) => { db = e.target.result; console.log('[DEBUG] DB Initialized.'); resolve(); }; 
         request.onerror = () => { console.error('[DEBUG] DB Initialization Failed.'); resolve(); };
@@ -662,30 +666,17 @@
       console.log('[DEBUG] Saving transfer data. ID:', id);
       localStorage.setItem('notepad_last_transfer_id', id);
       try {
-        const safeData = data.map(d => ({...d, handle: null}));
-        localStorage.setItem('transfer_' + id, JSON.stringify(safeData));
-      } catch(e) {}
-      
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').put(data, id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
+        localStorage.setItem('transfer_' + id, JSON.stringify(data));
+      } catch(e) { console.error('[DEBUG] localStorage save error:', e); }
+      return Promise.resolve();
     }
 
     function getTransferData(id) { 
       console.log('[DEBUG] Getting transfer data. ID:', id);
       return new Promise(resolve => { 
-        if (!db) return resolve(null);
-        const tx = db.transaction('transfers', 'readonly'); 
-        const req = tx.objectStore('transfers').get(id); 
-        req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null); 
-      }).then(data => {
-        if (data) return data;
         const local = localStorage.getItem('transfer_' + id);
-        if (local) { try { return JSON.parse(local); } catch(e) {} }
-        return null;
+        if (local) { try { resolve(JSON.parse(local)); return; } catch(e) {} }
+        resolve(null);
       }); 
     }
 
@@ -693,12 +684,7 @@
       console.log('[DEBUG] Deleting transfer data. ID:', id);
       localStorage.removeItem('transfer_' + id);
       localStorage.removeItem('notepad_last_transfer_id');
-      return new Promise(resolve => { 
-        if (!db) return resolve();
-        const tx = db.transaction('transfers', 'readwrite'); 
-        tx.objectStore('transfers').delete(id); 
-        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
-      }); 
+      return Promise.resolve();
     }
 
     function getRecentFiles() { return new Promise((resolve) => { if (!db) return resolve([]); const tx = db.transaction('settings', 'readonly'); const req = tx.objectStore('settings').get('recentFiles'); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
@@ -880,8 +866,8 @@
           
           selectedTabs.clear();
           payload.forEach(data => {
-            const rawBytes = data.rawBytes ? new Uint8Array(data.rawBytes) : null;
-            const id = createTab(data.filename, data.content, data.encoding, data.handle, rawBytes, true);
+            const rawBytes = data.content ? new Uint8Array(Encoding.convert(Encoding.stringToCode(data.content), { to: data.encoding, from: 'UNICODE' })) : null;
+            const id = createTab(data.filename, data.content, data.encoding, null, rawBytes, true);
             const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true;
             selectedTabs.add(id);
           });
