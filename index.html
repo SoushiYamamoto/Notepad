@@ -96,7 +96,7 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* Windows標準風 検索ダイアログ */
+    /* 検索・置換ダイアログ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
@@ -106,7 +106,7 @@
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
     .win-dialog-content { display: flex; gap: 15px; width: 100%; box-sizing: border-box; }
-    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; }
+    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; min-width: 0; }
     .win-dialog-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .win-dialog-label { width: 125px; min-width: 125px; white-space: nowrap; display: inline-block; text-align: left; }
     .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; min-width: 0; width: 100%; }
@@ -131,7 +131,6 @@
 </head>
 <body>
 
-  <!-- バージョン情報など -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -157,10 +156,8 @@
     </div>
   </div>
 
-  <!-- 検索・置換用 モーダル遮断オーバーレイレイヤー -->
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
-  <!-- Windows標準風 検索ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
@@ -188,7 +185,6 @@
     </div>
   </div>
 
-  <!-- Windows標準風 置換ダイアログ -->
   <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
@@ -479,7 +475,7 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      // 別のウィンドウがタブを受け取った通知が来たら元のタブを消去
+      // 他ウィンドウから「受け取ったよ」という合図が来たら、こちらのタブを消去する
       if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
         removeDraggedTabsLocally();
       }
@@ -531,8 +527,8 @@
       selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
+        // 最後のタブを消した場合はウィンドウごと閉じる
         window.close(); 
-        // 念のため閉じなかった場合のフォールバック
         setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
@@ -559,7 +555,7 @@
           e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
           e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
 
-          // ★ 本物そっくりのゴースト画像（プレビュー）の作成 ★
+          // ★ プレビュー(ゴースト画像)の作成 ★
           ghostElement = document.createElement('div');
           ghostElement.style.position = 'absolute';
           ghostElement.style.top = '-10000px'; 
@@ -625,7 +621,8 @@
           ghostElement.appendChild(ghostBody);
           document.body.appendChild(ghostElement);
           
-          e.dataTransfer.setDragImage(ghostElement, 40, 40);
+          // ★ Yオフセットを15に減らして、タブ部分を掴んでいるように調整 ★
+          e.dataTransfer.setDragImage(ghostElement, 40, 15);
 
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
           await saveTransferData(currentDragTransferId, payload);
@@ -649,18 +646,19 @@
 
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
-          // ★ 新しいウィンドウを開くかどうかの確実な判定 ★
+          // ★ ウィンドウが重複して開く問題の最終解決 ★
           if (currentDragTransferId) {
              const tid = currentDragTransferId;
-             // 少しだけ待ち、別のウィンドウが「受け取った」と合図してこなければウィンドウを開く
+             // Timeoutを長め(500ms)に取り、他のウィンドウからの「受け取った」合図を確実に待つ
              setTimeout(async () => {
+                 // もし currentDragTransferId がまだ tid のままなら、他のウィンドウには受け取られなかった（外に落とされた）と判断
                  if (currentDragTransferId === tid) {
                      const payload = await getTransferData(tid);
                      if (payload) {
                          window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
                      }
                  }
-             }, 300);
+             }, 500);
           }
           draggedTabId = null; 
         };
@@ -684,14 +682,9 @@
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
-    // ★ クリックによる選択解除（エディタのフォーカスイベントではなくマウスイベントで行う） ★
+    // ★ エディタクリック時の複数選択解除バグ修正（意図しない解除を防ぐ） ★
     document.addEventListener('mousedown', e => {
       if (!e.target.closest('.menu-container')) closeMenus();
-      if (!e.target.closest('.tab-bar') && !e.target.closest('.win-dialog') && selectedTabs.size > 1) {
-          selectedTabs.clear();
-          if (activeTabId) selectedTabs.add(activeTabId);
-          renderTabs();
-      }
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
@@ -702,10 +695,11 @@
       if (!transferId) transferId = localStorage.getItem('notepad_last_transfer_id');
       
       if (transferId && transferId !== currentDragTransferId) {
-        // 別ウィンドウからのドロップ
+        // ★ ドロップを受け取った側が「最優先で」合図を送り、相手が余計なウィンドウを開くのを防ぐ ★
+        bc.postMessage({ type: 'tabs-adopted', transferId });
+        
         const payload = await getTransferData(transferId);
         if (payload && Array.isArray(payload)) {
-          bc.postMessage({ type: 'tabs-adopted', transferId });
           await deleteTransferData(transferId);
           
           if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
@@ -753,11 +747,12 @@
         
         tabs.splice(toIndex, 0, ...movedTabs); 
         
-        // ★ ドラッグ完了状態にし、新しいウィンドウが開かないようにする ★
+        // 自ウィンドウ内での移動完了なので、新規ウィンドウが開かないようにIDをクリアする
         if (currentDragTransferId) {
            await deleteTransferData(currentDragTransferId);
            currentDragTransferId = null;
         }
+        
         renderTabs();
       } else {
         const items = e.dataTransfer.items; if (!items) return;
@@ -966,6 +961,7 @@
       });
     }
 
+    // ★ 起動初期化ロジック ★
     initDB().then(async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
@@ -973,6 +969,7 @@
       if (urlTransferId) {
         const payload = await getTransferData(urlTransferId);
         if (payload && Array.isArray(payload)) {
+          // データを開けた場合は直ちに元のウィンドウへ合図を送る
           bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
           await deleteTransferData(urlTransferId);
           selectedTabs.clear();
@@ -984,7 +981,12 @@
           });
           renderTabs();
           window.history.replaceState({}, document.title, window.location.pathname);
-        } else { createTab(); }
+        } else { 
+          // ★ もしデータがなければ、他のウィンドウに先を越された(空振り)と判断してこのウィンドウを閉じる ★
+          window.close();
+          // もし閉じれなかった場合のみ無題を作る
+          setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
+        }
       } else { createTab(); }
       updateRecentMenu();
     });
