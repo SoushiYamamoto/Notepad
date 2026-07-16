@@ -105,19 +105,21 @@
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
-      font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px; color: #000;
-      user-select: none; width: 480px; border-radius: 2px; /* 日本語用に幅を360px→480pxへ大幅拡張 */
+      font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
+      user-select: none; width: 440px; border-radius: 2px;
     }
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 12px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
-    .win-dialog-row { display: flex; align-items: center; margin-bottom: 10px; gap: 8px; }
-    .win-dialog-label { width: 125px; white-space: nowrap; } /* 日本語ラベルが収まるよう幅を拡張 */
-    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; }
+    .win-dialog-content { display: flex; gap: 15px; }
+    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+    .win-dialog-row { display: flex; align-items: center; gap: 8px; }
+    .win-dialog-label { min-width: 120px; white-space: nowrap; }
+    .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; }
     .win-dialog-input:focus { border-color: #0078d7; }
-    .win-dialog-buttons-vertical { display: flex; flex-direction: column; gap: 6px; width: 110px; } /* ボタン幅を確保 */
+    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 100px; }
     .win-dialog-btn { padding: 4px 0; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
-    .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px; margin-top: 5px; position: relative; }
+    .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px;}
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
 
     @media print {
@@ -134,6 +136,7 @@
 </head>
 <body>
 
+  <!-- バージョン情報 -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -143,6 +146,7 @@
     </div>
   </div>
 
+  <!-- インストール促進 -->
   <div id="installModal" class="modal-overlay">
     <div class="modal-content">
       <h3>アプリのインストール</h3>
@@ -159,47 +163,51 @@
     </div>
   </div>
 
-  <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;"></div>
+  <!-- ★ 検索・置換用 モーダル遮断オーバーレイレイヤー ★ -->
+  <!-- これが表示されている間は他の操作をブロックします -->
+  <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
-  <div id="winFindDialog" class="win-dialog" style="top: 25%; left: 50%; transform: translateX(-50%);">
+  <!-- ★ Windows標準風 検索ダイアログ ★ -->
+  <div id="winFindDialog" class="win-dialog">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
-      <span class="win-dialog-close" onclick="closeWinDialog('winFindDialog')">×</span>
+      <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
     </div>
-    <div style="display: flex; gap: 15px;">
-      <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 5px;">
+    <div class="win-dialog-content">
+      <div class="win-dialog-left">
+        <div class="win-dialog-row">
           <span class="win-dialog-label">検索する文字列(N):</span>
           <input type="text" id="winFindInput" class="win-dialog-input">
         </div>
-        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px;">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 15px;">
           <label style="margin-bottom: 5px;"><input type="checkbox" id="winFindMatchCase"> 大文字と小文字を区別する(C)</label>
-          <div class="win-dialog-group" style="width: 130px; display: flex; gap: 10px;">
+          <div class="win-dialog-group">
             <span class="win-dialog-group-title">検索方向</span>
             <label><input type="radio" name="winFindDir" value="up"> 上へ(U)</label>
             <label><input type="radio" name="winFindDir" value="down" checked> 下へ(D)</label>
           </div>
         </div>
       </div>
-      <div class="win-dialog-buttons-vertical">
+      <div class="win-dialog-right">
         <div class="win-dialog-btn" onclick="execWinFind()">次を検索(F)</div>
-        <div class="win-dialog-btn" onclick="closeWinDialog('winFindDialog')">キャンセル</div>
+        <div class="win-dialog-btn" onclick="closeAllWinDialogs()">キャンセル</div>
       </div>
     </div>
   </div>
 
-  <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: 50%; transform: translateX(-50%);">
+  <!-- ★ Windows標準風 置換ダイアログ ★ -->
+  <div id="winReplaceDialog" class="win-dialog">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
-      <span class="win-dialog-close" onclick="closeWinDialog('winReplaceDialog')">×</span>
+      <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
     </div>
-    <div style="display: flex; gap: 15px;">
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-        <div style="display: flex; align-items: center; gap: 5px;">
+    <div class="win-dialog-content">
+      <div class="win-dialog-left">
+        <div class="win-dialog-row">
           <span class="win-dialog-label">検索する文字列(N):</span>
           <input type="text" id="winReplaceFindInput" class="win-dialog-input">
         </div>
-        <div style="display: flex; align-items: center; gap: 5px;">
+        <div class="win-dialog-row">
           <span class="win-dialog-label">置換後の文字列(P):</span>
           <input type="text" id="winReplaceWithInput" class="win-dialog-input">
         </div>
@@ -207,11 +215,11 @@
           <label><input type="checkbox" id="winReplaceMatchCase"> 大文字と小文字を区別する(C)</label>
         </div>
       </div>
-      <div class="win-dialog-buttons-vertical">
+      <div class="win-dialog-right">
         <div class="win-dialog-btn" onclick="execWinReplaceFind()">次を検索(F)</div>
         <div class="win-dialog-btn" onclick="execWinReplaceOne()">置換して次に(R)</div>
         <div class="win-dialog-btn" onclick="execWinReplaceAll()">すべて置換(A)</div>
-        <div class="win-dialog-btn" onclick="closeWinDialog('winReplaceDialog')">キャンセル</div>
+        <div class="win-dialog-btn" onclick="closeAllWinDialogs()">キャンセル</div>
       </div>
     </div>
   </div>
@@ -346,26 +354,36 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
+    // Aceエディタ内部の検索機能を完全に削除し、自作ダイアログを強制する
+    editor.commands.removeCommand('find');
+    editor.commands.removeCommand('replace');
     editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => menuAction('save') });
     editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => menuAction('saveAs') });
     editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
     editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
-    editor.commands.addCommand({ name: 'find', bindKey: {win: 'Ctrl-F', mac: 'Command-F'}, exec: () => openWinFind() });
-    editor.commands.addCommand({ name: 'replace', bindKey: {win: 'Ctrl-H', mac: 'Command-H'}, exec: () => openWinReplace() });
 
+    // ★ グローバルなキーボードキャプチャを強化（ブラウザの標準機能を強力にブロック） ★
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
         const key = e.key.toLowerCase();
-        if (key === 's') { e.preventDefault(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); }
-        else if (key === 'o') { e.preventDefault(); menuAction('open'); }
-        else if (key === 'p') { e.preventDefault(); printContent(); }
-        else if (key === 'f') { e.preventDefault(); openWinFind(); }
-        else if (key === 'h') { e.preventDefault(); openWinReplace(); }
-      } else if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
-    }, { capture: true });
+        if (key === 'f') {
+          e.preventDefault(); e.stopPropagation(); openWinFind(); return false;
+        } else if (key === 'h') {
+          e.preventDefault(); e.stopPropagation(); openWinReplace(); return false;
+        } else if (key === 's') {
+          e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false;
+        } else if (key === 'o') {
+          e.preventDefault(); e.stopPropagation(); menuAction('open'); return false;
+        } else if (key === 'p') {
+          e.preventDefault(); e.stopPropagation(); printContent(); return false;
+        }
+      } else if (e.key === 'F5') {
+        e.preventDefault(); insertTimeDate();
+      }
+    }, true);
 
     // ==========================================
-    // ★ 検索・置換モーダル制御（オーバーレイ連動） ★
+    // ★ Windows標準メモ帳風 検索・置換制御ロジック ★
     // ==========================================
     function openWinFind() {
       closeMenus();
@@ -373,9 +391,16 @@
       const selected = editor.getSelectedText();
       if (selected && !selected.includes("\n")) document.getElementById('winFindInput').value = selected;
       
-      // モーダル背景とダイアログを同時に表示
-      document.getElementById('winDialogOverlay').style.display = 'flex';
-      document.getElementById('winFindDialog').style.display = 'block';
+      const dialog = document.getElementById('winFindDialog');
+      // 初期表示位置を中央にセット（transformを消すため絶対座標化）
+      if (!dialog.style.left || dialog.style.left.includes('%')) {
+          dialog.style.left = (window.innerWidth / 2 - 220) + 'px';
+          dialog.style.top = '25%';
+          dialog.style.transform = 'none';
+      }
+      
+      document.getElementById('winDialogOverlay').style.display = 'block';
+      dialog.style.display = 'block';
       document.getElementById('winFindInput').focus();
       document.getElementById('winFindInput').select();
     }
@@ -386,22 +411,33 @@
       const selected = editor.getSelectedText();
       if (selected && !selected.includes("\n")) document.getElementById('winReplaceFindInput').value = selected;
       
-      // モーダル背景とダイアログを同時に表示
-      document.getElementById('winDialogOverlay').style.display = 'flex';
-      document.getElementById('winReplaceDialog').style.display = 'block';
+      const dialog = document.getElementById('winReplaceDialog');
+      if (!dialog.style.left || dialog.style.left.includes('%')) {
+          dialog.style.left = (window.innerWidth / 2 - 220) + 'px';
+          dialog.style.top = '25%';
+          dialog.style.transform = 'none';
+      }
+
+      document.getElementById('winDialogOverlay').style.display = 'block';
+      dialog.style.display = 'block';
       document.getElementById('winReplaceFindInput').focus();
       document.getElementById('winReplaceFindInput').select();
     }
 
-    function closeWinDialog(id) {
-      document.getElementById(id).style.display = 'none';
-      document.getElementById('winDialogOverlay').style.display = 'none'; // 背景レイヤーも非表示に
+    function closeAllWinDialogs() {
+      document.getElementById('winFindDialog').style.display = 'none';
+      document.getElementById('winReplaceDialog').style.display = 'none';
+      document.getElementById('winDialogOverlay').style.display = 'none';
       editor.focus();
     }
 
-    document.getElementById('winFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinFind(); if (e.key === 'Escape') closeWinDialog('winFindDialog'); });
-    document.getElementById('winReplaceFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceFind(); if (e.key === 'Escape') closeWinDialog('winReplaceDialog'); });
-    document.getElementById('winReplaceWithInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceOne(); if (e.key === 'Escape') closeWinDialog('winReplaceDialog'); });
+    function closeWinDialog(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    document.getElementById('winFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinFind(); if (e.key === 'Escape') closeAllWinDialogs(); });
+    document.getElementById('winReplaceFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceFind(); if (e.key === 'Escape') closeAllWinDialogs(); });
+    document.getElementById('winReplaceWithInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceOne(); if (e.key === 'Escape') closeAllWinDialogs(); });
 
     function execWinFind() {
       const needle = document.getElementById('winFindInput').value;
@@ -441,15 +477,22 @@
       alert(`${count} 個の項目を置換しました。`);
     }
 
+    // ★ ドラッグ時のジャンプ(位置ズレ)を修正 ★
     let dragObj = null; let offsetX = 0; let offsetY = 0;
     function startDragDialog(e, id) {
       dragObj = document.getElementById(id);
-      offsetX = e.clientX - dragObj.offsetLeft;
-      offsetY = e.clientY - dragObj.offsetTop;
+      const rect = dragObj.getBoundingClientRect();
+      // transformを解除し、現在の実座標をleft/topに固定する
+      dragObj.style.left = rect.left + 'px';
+      dragObj.style.top = rect.top + 'px';
+      dragObj.style.transform = 'none';
+      
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
       document.addEventListener('mousemove', dragDialog);
       document.addEventListener('mouseup', stopDragDialog);
     }
-    function dragDialog(e) { if (!dragObj) return; dragObj.style.left = (e.clientX - offsetX) + 'px'; dragObj.style.top = (e.clientY - offsetY) + 'px'; dragObj.style.transform = 'none'; }
+    function dragDialog(e) { if (!dragObj) return; dragObj.style.left = (e.clientX - offsetX) + 'px'; dragObj.style.top = (e.clientY - offsetY) + 'px'; }
     function stopDragDialog() { document.removeEventListener('mousemove', dragDialog); document.removeEventListener('mouseup', stopDragDialog); dragObj = null; }
 
     // ==========================================
@@ -500,12 +543,14 @@
     }
 
     function switchTab(id) {
+      closeAllWinDialogs(); // タブ切り替え時にダイアログを閉じる
       activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
     }
 
     function closeTab(id, event, force = false) {
+      closeAllWinDialogs(); // タブを閉じる時にダイアログを閉じる
       if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
@@ -526,19 +571,46 @@
       Array.from(tabBar.children).forEach(child => { if (!child.classList.contains('add-tab-btn')) child.remove(); });
       tabs.forEach(tab => {
         const tabEl = document.createElement('div'); tabEl.className = 'tab';
-        if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
+        if (tab.id === activeTabId) tabEl.classList.add('active');
+        else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
+        
         tabEl.draggable = true;
         tabEl.ondragstart = async (e) => {
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
           transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
+          
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData('application/x-notepad-tabs', currentDragTransferId);
+          // 汎用テキスト形式でも転送IDを保存しておく（ChromeOSでの別ウィンドウ転送安定化のため）
+          e.dataTransfer.setData('text/plain', 'notepad-transfer:' + currentDragTransferId);
+
+          // ★ ドラッグ時のゴーストイメージ（プレビュー画像）を作成 ★
+          const ghost = document.createElement('div');
+          ghost.style.position = 'absolute'; ghost.style.top = '-1000px'; ghost.style.background = '#fff';
+          ghost.style.border = '1px solid #ccc'; ghost.style.boxShadow = '2px 2px 10px rgba(0,0,0,0.2)';
+          ghost.style.padding = '10px'; ghost.style.fontFamily = 'Meiryo, sans-serif'; ghost.style.fontSize = '12px';
+          ghost.style.color = '#333'; ghost.style.width = '240px'; ghost.style.maxHeight = '120px';
+          ghost.style.overflow = 'hidden'; ghost.style.zIndex = '9999'; ghost.style.borderRadius = '4px';
+          
+          const title = document.createElement('div'); title.style.fontWeight = 'bold'; title.style.marginBottom = '6px';
+          title.style.borderBottom = '1px solid #eee'; title.style.paddingBottom = '4px';
+          title.innerText = transferringTabIds.length > 1 ? `${transferringTabIds.length} 個のタブ` : tab.filename;
+          
+          const content = document.createElement('div'); content.style.whiteSpace = 'pre-wrap'; content.style.opacity = '0.7';
+          content.innerText = tab.session.getValue().substring(0, 150) + '...';
+          
+          ghost.appendChild(title); ghost.appendChild(content); document.body.appendChild(ghost);
+          e.dataTransfer.setDragImage(ghost, 20, 20);
+
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
           await saveTransferData(currentDragTransferId, payload);
-          setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
+          
+          setTimeout(() => { document.body.removeChild(ghost); document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
+        
         tabEl.ondragover = (e) => {
           e.preventDefault(); e.stopPropagation(); document.getElementById('tab-bar').classList.remove('drag-over-empty'); e.dataTransfer.dropEffect = "move";
-          if (e.dataTransfer.types.includes('application/x-notepad-tabs')) {
+          if (e.dataTransfer.types.length > 0) {
              if (selectedTabs.has(tab.id)) return; const rect = tabEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); tabEl.classList.toggle('drag-over-left', isLeft); tabEl.classList.toggle('drag-over-right', !isLeft);
           }
         };
@@ -547,18 +619,24 @@
         tabEl.ondragend = (e) => {
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           if (currentDragTransferId) { if (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight) { if (e.dataTransfer.dropEffect === 'none') { window.open('?transfer=' + currentDragTransferId, '_blank', 'width=800,height=600'); removeDraggedTabsLocally(); } } }
+          draggedTabId = null; 
         };
+        
         tabEl.onclick = (e) => {
           if (e.shiftKey) { if (selectedTabs.has(tab.id)) { selectedTabs.delete(tab.id); if (activeTabId === tab.id && selectedTabs.size > 0) switchTab(Array.from(selectedTabs)[0]); } else { selectedTabs.add(tab.id); switchTab(tab.id); } renderTabs(); }
           else { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
         };
+        
         const titleEl = document.createElement('div'); titleEl.className = 'tab-title'; titleEl.innerText = (tab.isDirty ? "*" : "") + tab.filename;
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
     }
 
-    tabBar.ondragover = (e) => { e.preventDefault(); if (e.dataTransfer.types.includes('application/x-notepad-tabs') || e.dataTransfer.types.includes('Files')) tabBar.classList.add('drag-over-empty'); };
+    const tabBar = document.getElementById('tab-bar');
+
+    // ★ 他のウィンドウから来たドラッグも確実に判定して青く光らせる ★
+    tabBar.ondragover = (e) => { e.preventDefault(); if (e.dataTransfer.types.length > 0) tabBar.classList.add('drag-over-empty'); };
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
@@ -566,25 +644,53 @@
 
     async function handleTabDrop(e, targetEl, targetTabId) {
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
-      const transferId = e.dataTransfer.getData('application/x-notepad-tabs');
+      
+      let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
+      if (!transferId) {
+        // フォールバック: text/plainに仕込まれたIDを取得
+        const txt = e.dataTransfer.getData('text/plain');
+        if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1];
+      }
+      
       if (transferId && transferId !== currentDragTransferId) {
         const payload = await getTransferData(transferId);
         if (payload && Array.isArray(payload)) {
-          await deleteTransferData(transferId); if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
-          let toIndex = tabs.length; if (targetEl && targetTabId && tabs.length > 0) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); if(toIndex < 0) toIndex = tabs.length; }
-          selectedTabs.clear(); let lastId = null;
-          payload.forEach(data => { const id = createTab(data.filename, data.content, data.encoding, data.handle); const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true; selectedTabs.add(id); lastId = id; });
-          renderTabs(); if(lastId) switchTab(lastId); bc.postMessage({ type: 'tabs-adopted', transferId });
+          await deleteTransferData(transferId);
+          if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+          
+          let toIndex = tabs.length;
+          if (targetEl && targetTabId && tabs.length > 0) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); if(toIndex < 0) toIndex = tabs.length; }
+          
+          selectedTabs.clear(); let lastCreatedId = null;
+          payload.forEach(data => {
+            const id = createTab(data.filename, data.content, data.encoding, data.handle); const newTab = tabs.find(t => t.id === id); if (data.isDirty && newTab) newTab.isDirty = true;
+            const createdIndex = tabs.findIndex(t => t.id === id); const movedTab = tabs.splice(createdIndex, 1)[0]; tabs.splice(toIndex++, 0, movedTab);
+            selectedTabs.add(id); lastCreatedId = id;
+          });
+          renderTabs(); if (lastCreatedId) switchTab(lastCreatedId); bc.postMessage({ type: 'tabs-adopted', transferId });
         }
       } else if (transferringTabIds.length > 0) {
-        let toIndex = tabs.length; if (targetEl && targetTabId) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); }
+        let toIndex = tabs.length;
+        if (targetEl && targetTabId) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); }
         const movedTabs = []; transferringTabIds.forEach(id => { const idx = tabs.findIndex(t => t.id === id); if (idx !== -1) { movedTabs.push(tabs[idx]); tabs[idx] = null; } });
         tabs = tabs.filter(t => t !== null);
         if (targetTabId) { toIndex = tabs.findIndex(t => t.id === targetTabId) + (targetEl.classList.contains('drag-over-right') ? 1 : 0); if(toIndex === -1) toIndex = tabs.length; }
         tabs.splice(toIndex, 0, ...movedTabs); renderTabs();
+      } else {
+        // 通常のファイルドロップ
+        const items = e.dataTransfer.items; if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].kind === 'file') {
+            if (typeof items[i].getAsFileSystemHandle === 'function') { try { const handle = await items[i].getAsFileSystemHandle(); if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); continue; } } catch (err) {} }
+            const file = items[i].getAsFile(); if (file) await loadFileProcess(file, null);
+          }
+        }
       }
     }
 
+    // ==========================================
+    // データベース管理 (IndexedDB)
+    // ==========================================
     let db = null;
     function initDB() {
       return new Promise((resolve) => {
@@ -654,13 +760,37 @@
       event.stopPropagation();
     }
     function handleMenuHover(id, event) { if (isAnyMenuOpen) { let target = document.getElementById(id); if (!target.classList.contains('show')) { closeMenusWithoutResetState(); updateMenuStates(); target.classList.add('show'); event.currentTarget.classList.add('active'); } } }
+    
     function closeMenus() { closeMenusWithoutResetState(); isAnyMenuOpen = false; }
-    function closeMenusWithoutResetState() { document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show')); document.querySelectorAll('.menu-item-btn').forEach(b => b.classList.remove('active')); }
+    function closeMenusWithoutResetState() { 
+      document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show')); 
+      document.querySelectorAll('.menu-item-btn').forEach(b => b.classList.remove('active')); 
+    }
 
     document.addEventListener('click', e => {
       if (!e.target.closest('.menu-container')) closeMenus();
-      if (e.target.classList.contains('modal-overlay')) closeModals();
     });
+
+    async function menuAction(action) {
+      closeAllWinDialogs(); // メニューアクション時にダイアログを閉じる
+      closeMenus(); const tab = getActiveTab();
+      if (action === 'new') createTab();
+      else if (action === 'open') await openFileWithAPI();
+      else if (action === 'save') { if(tab) await executeSave(tab); }
+      else if (action === 'saveAs') { if(tab) await executeSaveAs(tab); }
+      else if (action === 'font') {
+        let size = prompt("フォントサイズを数値(px)で入力してください:", currentFontSize);
+        if (size && !isNaN(size)) { currentFontSize = parseInt(size); editor.setFontSize(currentFontSize); document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%"; }
+      }
+    }
+
+    async function openFileWithAPI() {
+      if (window.showOpenFilePicker) {
+        try { const handles = await window.showOpenFilePicker({ multiple: true }); for (const handle of handles) { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } } catch (err) {}
+      } else { document.getElementById('fileInputFallback').click(); }
+    }
+
+    function handleFileSelectFallback(e) { const files = e.target.files; if (!files) return; for (let i = 0; i < files.length; i++) loadFileProcess(files[i], null); e.target.value = ''; }
 
     async function loadFileProcess(file, handle) {
       for (let tab of tabs) {
@@ -694,7 +824,7 @@
       const currentContent = tab.session.getValue(); const bytes = Encoding.stringToCode(currentContent); const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: tab.encoding }); tab.session.setValue(Encoding.codeToString(unicodeArray)); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus();
     }
 
-    function printContent() { closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
+    function printContent() { closeAllWinDialogs(); closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
     function insertTimeDate() { const now = new Date(); const str = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString().replace(/\//g, '/'); editor.insert(str); closeMenus(); }
     function toggleWordWrap() { isWordWrap = !isWordWrap; editor.setOptions({ wrap: isWordWrap }); document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + "右端で折り返す(W)"; closeMenus(); }
     function changeZoom(dir) { if (dir === 0) currentFontSize = defaultFontSize; else currentFontSize += (dir * 2); if(currentFontSize < 6) currentFontSize = 6; editor.setFontSize(currentFontSize); document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%"; closeMenus(); }
@@ -722,4 +852,18 @@
       });
     }
 
-    const urlParams = new URLSearchParams(window.location.search); const urlTransferId = urlParams.get
+    const urlParams = new URLSearchParams(window.location.search); const urlTransferId = urlParams.get('transfer');
+    if (urlTransferId) {
+      initDB().then(async () => {
+        const payload = await getTransferData(urlTransferId);
+        if (payload && Array.isArray(payload)) {
+          await deleteTransferData(urlTransferId); selectedTabs.clear(); if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+          let lastId = null; payload.forEach(data => { const id = createTab(data.filename, data.content, data.encoding, data.handle); const t = tabs.find(x=>x.id===id); if (t && data.isDirty) t.isDirty = true; selectedTabs.add(id); lastId = id; });
+          updateTitleAndStatus(); renderTabs(); if(lastId) switchTab(lastId); window.history.replaceState({}, document.title, window.location.pathname);
+        } else { createTab(); }
+        updateRecentMenu();
+      });
+    } else { initDB().then(() => { updateRecentMenu(); }); createTab(); }
+  </script>
+</body>
+</html>
