@@ -31,7 +31,7 @@
     
     /* サブメニュー */
     .has-submenu::after { content: "▶"; position: absolute; right: 8px; font-size: 8px; top: 7px; color: #666; }
-    .submenu { display: none; position: absolute; top: 0; left: 100%; background: #f2f2f2; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); min-width: 180px; padding: 2px 0; margin-left: -1px; }
+    .submenu { display: none; position: absolute; top: 0; left: 100%; background: #f2f2f2; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); min-width: 200px; padding: 2px 0; margin-left: -1px; }
     .dropdown-item:hover > .submenu { display: block; }
 
     /* 無効なメニュー（グレーアウト） */
@@ -41,7 +41,6 @@
     /* エディタとステータスバー */
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
-    /* ステータスバーのレイアウトを修正し、左右に要素を配置できるようにしました */
     .status-bar { background: #f3f3f3; border-top: 1px solid #ccc; padding: 2px 15px; font-size: 11px; display: flex; justify-content: space-between; color: #333; user-select: none; }
     .status-right { display: flex; gap: 30px; }
     
@@ -99,6 +98,14 @@
       <div id="menu-file" class="dropdown">
         <div class="dropdown-item" onclick="menuAction('new')"><span>新規(N)</span><span class="shortcut">Ctrl+N</span></div>
         <div class="dropdown-item" onclick="menuAction('open')"><span>開く(O)...</span><span class="shortcut">Ctrl+O</span></div>
+        
+        <!-- ★ 最近使用したファイル メニューを追加 ★ -->
+        <div class="dropdown-item has-submenu">最近使用したファイル(R)
+          <div class="submenu" id="menu-recent-files">
+            <!-- JavaScriptで動的に生成されます -->
+          </div>
+        </div>
+        
         <div class="dropdown-item" id="menu-save" onclick="menuAction('save')"><span id="menu-save-text">保存(S)</span><span class="shortcut">Ctrl+S</span></div>
         <div class="dropdown-item" onclick="menuAction('saveAs')"><span>名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
         <div class="dropdown-divider"></div>
@@ -160,9 +167,7 @@
   <div id="editor"></div>
   
   <div class="status-bar">
-    <!-- ★ 左側にファイル名と更新マークを表示するエリアを追加 ★ -->
     <div id="file-info" style="font-weight: bold;">無題</div>
-    
     <div class="status-right">
       <div id="pos-info">1 行, 1 列</div>
       <div id="mode-info">TEXT</div>
@@ -172,7 +177,6 @@
   </div>
 
   <script>
-    // PWAインストール要件のためのService Worker登録
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(err => {
@@ -206,7 +210,170 @@
       updateTitleAndStatus();
     });
 
-    // ----- バージョン情報モーダルの制御 -----
+    // ==========================================
+    // ★ 最近使用したファイルの履歴管理（IndexedDB）
+    // ==========================================
+    let db = null;
+    let saveHistoryOption = localStorage.getItem('saveHistory') !== 'false'; // デフォルトは true
+
+    function initDB() {
+      return new Promise((resolve) => {
+        const request = indexedDB.open('NotepadDB', 1);
+        request.onupgradeneeded = (e) => {
+          let database = e.target.result;
+          if (!database.objectStoreNames.contains('settings')) {
+            database.createObjectStore('settings');
+          }
+        };
+        request.onsuccess = (e) => {
+          db = e.target.result;
+          resolve();
+        };
+        request.onerror = () => {
+          console.warn("IndexedDBの初期化に失敗しました。履歴機能は利用できません。");
+          resolve();
+        };
+      });
+    }
+
+    function getRecentFiles() {
+      return new Promise((resolve) => {
+        if (!db) return resolve([]);
+        const tx = db.transaction('settings', 'readonly');
+        const store = tx.objectStore('settings');
+        const req = store.get('recentFiles');
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+    }
+
+    function saveRecentFiles(files) {
+      return new Promise((resolve) => {
+        if (!db) return resolve();
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+        store.put(files, 'recentFiles');
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    async function addRecentFile(name, handle) {
+      if (!handle || !saveHistoryOption || !db) return;
+      
+      let files = await getRecentFiles();
+      let existingIndex = -1;
+      
+      // すでに履歴に同じファイルがあるか探す
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].handle.isSameEntry && await files[i].handle.isSameEntry(handle)) {
+          existingIndex = i;
+          break;
+        }
+      }
+      
+      // 同じファイルがあれば削除（後で先頭に追加するため）
+      if (existingIndex !== -1) {
+        files.splice(existingIndex, 1);
+      }
+      
+      // 先頭に追加して、最大5件に制限
+      files.unshift({ name, handle });
+      if (files.length > 5) {
+        files = files.slice(0, 5);
+      }
+      
+      await saveRecentFiles(files);
+      await updateRecentMenu();
+    }
+
+    // 履歴ファイルを開く前にブラウザにアクセス権限を再要求する
+    async function verifyPermission(fileHandle) {
+      const options = { mode: 'readwrite' };
+      if ((await fileHandle.queryPermission(options)) === 'granted') return true;
+      if ((await fileHandle.requestPermission(options)) === 'granted') return true;
+      return false;
+    }
+
+    // メニューの「最近使用したファイル」の中身を動的に生成する
+    async function updateRecentMenu() {
+      const menu = document.getElementById('menu-recent-files');
+      menu.innerHTML = '';
+      
+      if (saveHistoryOption) {
+        const files = await getRecentFiles();
+        if (files.length === 0) {
+          menu.innerHTML += `<div class="dropdown-item disabled">履歴なし</div>`;
+        } else {
+          files.forEach((f, index) => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            
+            // ファイル名部分（クリックで開く）
+            const nameSpan = document.createElement('span');
+            nameSpan.innerText = f.name;
+            nameSpan.style.cursor = 'pointer';
+            nameSpan.style.flex = '1';
+            nameSpan.style.overflow = 'hidden';
+            nameSpan.style.textOverflow = 'ellipsis';
+            nameSpan.onclick = async (e) => {
+              e.stopPropagation();
+              closeMenus();
+              if (isDirty && !confirm("変更が保存されていません。破棄してファイルを開きますか？")) return;
+              try {
+                if (await verifyPermission(f.handle)) {
+                  fileHandle = f.handle;
+                  const file = await fileHandle.getFile();
+                  await loadFileProcess(file);
+                  await addRecentFile(file.name, fileHandle);
+                }
+              } catch (err) {
+                alert("ファイルにアクセスできませんでした。（移動または削除された可能性があります）");
+              }
+            };
+            
+            // 削除用の「×」ボタン
+            const delSpan = document.createElement('span');
+            delSpan.innerText = '×';
+            delSpan.style.cursor = 'pointer';
+            delSpan.style.color = '#999';
+            delSpan.style.marginLeft = '10px';
+            delSpan.style.fontWeight = 'bold';
+            delSpan.onmouseenter = () => delSpan.style.color = '#d00';
+            delSpan.onmouseleave = () => delSpan.style.color = '#999';
+            delSpan.onclick = async (e) => {
+              e.stopPropagation(); // メニューが閉じるのを防ぐ
+              let currentFiles = await getRecentFiles();
+              currentFiles.splice(index, 1);
+              await saveRecentFiles(currentFiles);
+              await updateRecentMenu();
+            };
+            
+            item.appendChild(nameSpan);
+            item.appendChild(delSpan);
+            menu.appendChild(item);
+          });
+        }
+      } else {
+        menu.innerHTML += `<div class="dropdown-item disabled">履歴機能はオフです</div>`;
+      }
+      
+      menu.innerHTML += `<div class="dropdown-divider"></div>`;
+      
+      // 履歴を保存する・しないのトグルボタン
+      const toggleItem = document.createElement('div');
+      toggleItem.className = 'dropdown-item';
+      toggleItem.innerHTML = (saveHistoryOption ? "✔ " : "&nbsp;&nbsp;&nbsp;") + "履歴を保存する";
+      toggleItem.onclick = async (e) => {
+        e.stopPropagation();
+        saveHistoryOption = !saveHistoryOption;
+        localStorage.setItem('saveHistory', saveHistoryOption);
+        if (!saveHistoryOption) await saveRecentFiles([]); // オフにした瞬間に履歴を消去
+        await updateRecentMenu();
+      };
+      menu.appendChild(toggleItem);
+    }
+    // ==========================================
+
     function showAboutModal() {
       closeMenus();
       document.getElementById('aboutModal').style.display = 'flex';
@@ -216,7 +383,6 @@
       document.getElementById('aboutModal').style.display = 'none';
     }
 
-    // ----- メニューのグレーアウト（有効/無効）制御 -----
     function updateMenuStates() {
       const um = editor.session.getUndoManager();
       const hasSelection = !editor.selection.isEmpty();
@@ -308,6 +474,9 @@
           fileHandle = handle;
           const file = await fileHandle.getFile();
           await loadFileProcess(file);
+          
+          // 開いたファイルを履歴に追加
+          await addRecentFile(file.name, fileHandle);
         } catch (err) {
           console.log('キャンセルされました:', err);
         }
@@ -329,6 +498,9 @@
               fileHandle = handle;
               const file = await handle.getFile();
               await loadFileProcess(file);
+              
+              // ドラッグ&ドロップされたファイルを履歴に追加
+              await addRecentFile(file.name, fileHandle);
               return;
             }
           } catch (err) {}
@@ -400,6 +572,9 @@
           editor.session.getUndoManager().markClean();
           updateTitleAndStatus();
           updateMode(currentFilename);
+          
+          // 新しく保存したファイルを履歴に追加
+          await addRecentFile(currentFilename, fileHandle);
         } catch (err) {
           console.log('保存キャンセル:', err);
         }
@@ -493,18 +668,11 @@
       document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
     }
 
-    // ★ ステータスバー左側にファイル名と変更状態（*）を表示するよう修正 ★
     function updateTitleAndStatus() {
       isDirty = !editor.session.getUndoManager().isClean();
       const prefix = isDirty ? "*" : "";
-      
-      // ウィンドウタイトル（PWAではあまり見えませんが念のため残します）
       document.title = prefix + `メモ帳 - ${currentFilename}`;
-      
-      // ステータスバー左側のファイル名表示
       document.getElementById('file-info').innerText = prefix + currentFilename;
-      
-      // 右側の文字コード表示
       document.getElementById('enc-info').innerText = currentEncoding;
     }
 
@@ -527,10 +695,17 @@
           fileHandle = handle;
           const file = await handle.getFile();
           await loadFileProcess(file);
+          
+          // OSからの関連付けで開いたファイルを履歴に追加
+          await addRecentFile(file.name, fileHandle);
         }
       });
     }
 
+    // アプリ起動時の初期化
+    initDB().then(() => {
+      updateRecentMenu();
+    });
     updateTitleAndStatus();
   </script>
 </body>
