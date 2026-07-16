@@ -88,7 +88,6 @@
     
     #fileInputFallback { display: none; }
 
-    /* モーダル群 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2000; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-content h3 { margin-top: 0; font-size: 18px; font-weight: normal; color: #222; }
@@ -116,7 +115,6 @@
 </head>
 <body>
 
-  <!-- バージョン情報 -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -126,7 +124,6 @@
     </div>
   </div>
 
-  <!-- インストール促進ダイアログ -->
   <div id="installModal" class="modal-overlay">
     <div class="modal-content">
       <h3>アプリのインストール</h3>
@@ -283,15 +280,11 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
-    // ★ エディタ内部のショートカットも上書き（ブラウザのデフォルト操作を確実にブロック） ★
     editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => menuAction('save') });
     editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => menuAction('saveAs') });
     editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
     editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
 
-    // ==========================================
-    // ★ グローバルショートカット（キャプチャリングフェーズ）★
-    // ==========================================
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
         const key = e.key.toLowerCase();
@@ -318,121 +311,7 @@
         e.preventDefault();
         insertTimeDate();
       }
-    }, { capture: true }); // capture: true により他の処理より最優先で発火
-
-    // ==========================================
-    // 翻訳モード (Ctrlキー2回押し)
-    // ==========================================
-    let translateMode = false;
-    let translateSourceRow = -1;
-    let aiSession = null;
-    let translateDebounce = null;
-    let lastCtrlPress = 0;
-
-    async function getAIModel() {
-        if (!window.ai) return null;
-        if (window.ai.languageModel) return window.ai.languageModel; 
-        if (window.ai.assistant) return window.ai.assistant; 
-        return null;
-    }
-
-    document.addEventListener('keydown', async (e) => {
-      if (e.key === 'Control') {
-        const now = Date.now();
-        if (now - lastCtrlPress < 400) {
-          await toggleTranslateMode();
-        }
-        lastCtrlPress = now;
-      }
-    });
-
-    async function toggleTranslateMode() {
-      translateMode = !translateMode;
-      if (translateMode) {
-        const aiModel = await getAIModel();
-        if (!aiModel) {
-          alert("Prompt API (Gemini Nano) が検出されませんでした。\n\n以下の2つのフラグを確認してください：\n1. chrome://flags/#prompt-api-for-gemini-nano を「Enabled」にする\n2. chrome://flags/#optimization-guide-on-device-model を「Enabled BypassPerfRequirement」にする\n\n変更後、ブラウザを再起動してください。");
-          translateMode = false;
-          return;
-        }
-        
-        try {
-          const caps = await aiModel.capabilities();
-          if (caps.available === 'no') {
-            alert("Gemini Nanoのモデルデータが端末にダウンロードされていません。\nchrome://components にアクセスし、「Optimization Guide On Device Model」を確認してアップデートしてください。");
-            translateMode = false;
-            return;
-          }
-          
-          aiSession = await aiModel.create();
-          const pos = editor.getCursorPosition();
-          translateSourceRow = pos.row;
-          
-          editor.session.insert({row: translateSourceRow, column: Number.MAX_VALUE}, "\n");
-          editor.moveCursorTo(translateSourceRow, pos.column);
-          
-          const modeInfo = document.getElementById('mode-info');
-          modeInfo.innerText = "TRANSLATE";
-          modeInfo.style.color = "#0067c0";
-          modeInfo.style.fontWeight = "bold";
-          
-        } catch(err) {
-          alert("AI初期化エラー: " + err.message);
-          translateMode = false;
-        }
-      } else {
-        translateSourceRow = -1;
-        if (aiSession) {
-          aiSession.destroy();
-          aiSession = null;
-        }
-        const activeTab = getActiveTab();
-        if(activeTab) updateMode(activeTab.filename);
-        document.getElementById('mode-info').style.color = "";
-        document.getElementById('mode-info').style.fontWeight = "";
-      }
-    }
-
-    editor.on('change', (e) => {
-      if (!translateMode || translateSourceRow === -1) return;
-      
-      const startRow = e.start.row;
-      const endRow = e.end.row;
-      
-      if (startRow <= translateSourceRow && endRow >= translateSourceRow) {
-        clearTimeout(translateDebounce);
-        translateDebounce = setTimeout(async () => {
-          const text = editor.session.getLine(translateSourceRow);
-          const targetRow = translateSourceRow + 1;
-          
-          if (!text.trim()) {
-             const lineLen = editor.session.getLine(targetRow).length;
-             editor.session.replace(new ace.Range(targetRow, 0, targetRow, lineLen), "");
-             return;
-          }
-          
-          try {
-            const promptStr = "以下を自然な英語にして、英文のみを出力してください。解説などは他の内容は一切不要です。\n\n" + text;
-            const result = await aiSession.prompt(promptStr);
-            
-            const lineLen = editor.session.getLine(targetRow).length;
-            editor.session.replace(new ace.Range(targetRow, 0, targetRow, lineLen), result.trim());
-          } catch (err) {
-            console.error("Translation Error:", err);
-          }
-        }, 500);
-      } else if (startRow < translateSourceRow) {
-        if (e.action === 'insert') {
-            translateSourceRow += (e.lines.length - 1);
-        } else if (e.action === 'remove') {
-            translateSourceRow -= (e.lines.length - 1);
-        }
-      }
-    });
-
-    editor.on('changeSession', () => {
-      if(translateMode) toggleTranslateMode();
-    });
+    }, { capture: true });
 
     // ==========================================
     // ウィンドウ間通信
@@ -749,6 +628,7 @@
       });
     }
 
+    // タブ転送用
     function saveTransferData(id, data) {
       return new Promise(resolve => {
          const tx = db.transaction('transfers', 'readwrite');
@@ -929,110 +809,13 @@
     document.addEventListener('click', e => {
       if (!e.target.closest('.menu-container')) closeMenus();
       if (e.target.classList.contains('modal-overlay')) closeModals();
-    });
-
-    async function menuAction(action) {
-      closeMenus();
-      const tab = getActiveTab();
       
-      if (action === 'new') {
-        createTab();
-      } else if (action === 'open') {
-        await openFileWithAPI();
-      } else if (action === 'save') {
-        if(tab) await executeSave(tab);
-      } else if (action === 'saveAs') {
-        if(tab) await executeSaveAs(tab);
-      } else if (action === 'font') {
-        let size = prompt("フォントサイズを数値(px)で入力してください:", currentFontSize);
-        if (size && !isNaN(size)) {
-          currentFontSize = parseInt(size);
-          editor.setFontSize(currentFontSize);
-          document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%";
-        }
-      }
-    }
-
-    async function openFileWithAPI() {
-      if (window.showOpenFilePicker) {
-        try {
-          const handles = await window.showOpenFilePicker({ multiple: true });
-          for (const handle of handles) {
-            const file = await handle.getFile();
-            await loadFileProcess(file, handle);
-            await addRecentFile(file.name, handle);
-          }
-        } catch (err) {}
-      } else {
-        document.getElementById('fileInputFallback').click();
-      }
-    }
-
-    window.addEventListener('dragover', e => {
-      e.preventDefault();
-      document.getElementById('tab-bar').classList.remove('drag-over-empty');
-    });
-
-    window.addEventListener('drop', async e => {
-      e.preventDefault();
-      
-      const transferId = e.dataTransfer.getData('application/x-notepad-tabs');
-      if (transferId && transferId !== currentDragTransferId) {
-          const payload = await getTransferData(transferId);
-          if(payload && Array.isArray(payload)) {
-              await deleteTransferData(transferId);
-              
-              if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") {
-                 tabs = [];
-              }
-              
-              selectedTabs.clear();
-              let lastId = null;
-              payload.forEach(data => {
-                 const id = createTab(data.filename, data.content, data.encoding, data.handle);
-                 const t = tabs.find(x => x.id === id);
-                 if(data.isDirty && t) t.isDirty = true;
-                 selectedTabs.add(id);
-                 lastId = id;
-              });
-              
-              updateTitleAndStatus();
-              renderTabs();
-              if(lastId) switchTab(lastId);
-              bc.postMessage({ type: 'tabs-adopted', transferId });
-          }
-          return;
-      }
-
-      const items = e.dataTransfer.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file') {
-          if (typeof items[i].getAsFileSystemHandle === 'function') {
-            try {
-              const handle = await items[i].getAsFileSystemHandle();
-              if (handle.kind === 'file') {
-                const file = await handle.getFile();
-                await loadFileProcess(file, handle);
-                await addRecentFile(file.name, handle);
-                continue;
-              }
-            } catch (err) {}
-          }
-          const file = items[i].getAsFile();
-          if (file) await loadFileProcess(file, null);
-        }
+      if (!e.target.closest('.tab-bar') && selectedTabs.size > 1) {
+        selectedTabs.clear();
+        selectedTabs.add(activeTabId);
+        renderTabs();
       }
     });
-
-    function handleFileSelectFallback(e) {
-      const files = e.target.files;
-      if (!files) return;
-      for (let i = 0; i < files.length; i++) {
-        loadFileProcess(files[i], null);
-      }
-      e.target.value = '';
-    }
 
     async function loadFileProcess(file, handle) {
       for (let tab of tabs) {
@@ -1140,82 +923,6 @@
       }
     }
 
-    function switchEncoding() {
-      const tab = getActiveTab();
-      if(!tab) return;
-      const encs = ['UTF8', 'SJIS', 'EUCJP', 'UTF16'];
-      let idx = encs.indexOf(tab.encoding);
-      tab.encoding = encs[(idx + 1) % encs.length];
-      
-      const currentContent = tab.session.getValue();
-      const bytes = Encoding.stringToCode(currentContent);
-      const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: tab.encoding });
-      tab.session.setValue(Encoding.codeToString(unicodeArray));
-      tab.session.getUndoManager().markClean();
-      tab.isDirty = false;
-      renderTabs();
-      updateTitleAndStatus();
-    }
-
-    function printContent() {
-      closeMenus();
-      const tab = getActiveTab();
-      if (!tab) return;
-      let printDiv = document.getElementById('print-area');
-      if (!printDiv) {
-        printDiv = document.createElement('div');
-        printDiv.id = 'print-area';
-        document.body.appendChild(printDiv);
-      }
-      printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre";
-      printDiv.innerText = tab.session.getValue();
-      window.print();
-    }
-
-    function insertTimeDate() {
-      const now = new Date();
-      const str = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString().replace(/\//g, '/');
-      editor.insert(str);
-      closeMenus();
-    }
-
-    function toggleWordWrap() {
-      isWordWrap = !isWordWrap;
-      editor.setOptions({ wrap: isWordWrap });
-      document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + "右端で折り返す(W)";
-      closeMenus();
-    }
-
-    function changeZoom(dir) {
-      if (dir === 0) currentFontSize = defaultFontSize;
-      else currentFontSize += (dir * 2);
-      if(currentFontSize < 6) currentFontSize = 6;
-      editor.setFontSize(currentFontSize);
-      document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%";
-      closeMenus();
-    }
-
-    async function execCmd(cmd) {
-      closeMenus();
-      if(cmd === 'copy') {
-        const text = editor.getSelectedText();
-        if(text) await navigator.clipboard.writeText(text);
-      } else if (cmd === 'cut') {
-        const text = editor.getSelectedText();
-        if(text) {
-          await navigator.clipboard.writeText(text);
-          editor.insert("");
-        }
-      } else if (cmd === 'paste') {
-        try {
-          const text = await navigator.clipboard.readText();
-          editor.insert(text);
-        } catch(e) {
-          alert("ブラウザの仕様により貼り付けられません。Ctrl+Vを使用してください。");
-        }
-      }
-    }
-
     function updateMode(filename) {
       const tab = getActiveTab();
       if(!tab) return;
@@ -1227,18 +934,7 @@
       else if (filename.endsWith('.ini')) mode = "ace/mode/ini";
       tab.session.setMode(mode);
       
-      if (!translateMode) {
-          document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
-      }
-    }
-
-    function updateTitleAndStatus() {
-      const tab = getActiveTab();
-      if (!tab) return;
-      const prefix = tab.isDirty ? "*" : "";
-      
-      document.title = prefix + tab.filename + " - メモ帳";
-      document.getElementById('enc-info').innerText = tab.encoding;
+      document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
     }
 
     if ('launchQueue' in window) {
