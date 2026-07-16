@@ -10,11 +10,17 @@
   <link rel="icon" type="image/png" sizes="96x96" href="favicon96.png">
   
   <style>
+    :root {
+      /* 全体の統一フォントサイズ */
+      --ui-font-size: 13px; 
+    }
+
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
     /* ★ タブバーのスタイル (Windows 11風) ★ */
     .tab-bar {
-      display: flex; background: #e8eaed; padding: 5px 5px 0 5px; border-bottom: 1px solid #ccc;
+      display: flex; background: #e8eaed; padding: 5px 5px 0 5px; 
+      border-bottom: 1px solid #ccc; /* 基準となる下線 */
       align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none;
     }
     .tab-bar::-webkit-scrollbar { height: 4px; }
@@ -22,15 +28,20 @@
     
     .tab {
       display: flex; align-items: center; justify-content: space-between;
-      min-width: 120px; max-width: 250px; padding: 6px 10px; margin-right: 2px;
-      background: #f3f3f3; border: 1px solid transparent; border-bottom: none;
-      border-radius: 6px 6px 0 0; font-size: 12px; color: #555; cursor: default;
+      min-width: 120px; max-width: 250px; 
+      /* 下のborderを隠すためにpaddingとmarginを調整 */
+      padding: 6px 10px 7px 10px; margin-right: 2px; margin-bottom: -1px;
+      background: #f3f3f3; 
+      border: 1px solid transparent; border-bottom: 1px solid transparent;
+      border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default;
       transition: background 0.2s; white-space: nowrap; overflow: hidden;
     }
     .tab:hover { background: #e0e0e0; }
     .tab.active {
-      background: #fff; color: #000; border-color: #ccc;
-      box-shadow: 0 2px 0 #fff; z-index: 2; position: relative;
+      background: #fff; color: #000; 
+      border-color: #ccc; 
+      border-bottom: 1px solid #fff; /* 下のメニューバーの白と繋げる */
+      z-index: 2; position: relative;
     }
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close {
@@ -48,7 +59,7 @@
     .add-tab-btn:hover { background: #d0d0d0; }
 
     /* メニューバー周り */
-    .menu-bar { background: #fff; display: flex; font-size: 11px; border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
+    .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
     .menu-container { position: relative; }
     .menu-item-btn { padding: 6px 12px; cursor: default; border-radius: 4px; }
     .menu-item-btn:hover, .menu-item-btn.active { background: #f0f0f0; }
@@ -56,7 +67,7 @@
     /* ドロップダウンメニュー */
     .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); min-width: 250px; padding: 4px 0; }
     .dropdown.show { display: block; }
-    .dropdown-item { padding: 6px 15px 6px 25px; display: flex; justify-content: space-between; align-items: center; cursor: default; position: relative; white-space: nowrap; font-size: 12px; color: #333; }
+    .dropdown-item { padding: 6px 15px 6px 25px; display: flex; justify-content: space-between; align-items: center; cursor: default; position: relative; white-space: nowrap; font-size: var(--ui-font-size); color: #333; }
     .dropdown-item:hover { background: #f0f0f0; }
     .dropdown-divider { height: 1px; background: #eee; margin: 4px 0; }
     .shortcut { color: #888; margin-left: 30px; font-size: 11px; pointer-events: none; }
@@ -70,8 +81,7 @@
     /* エディタとステータスバー */
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
-    /* ★ ステータスバーのデザインを画像に合わせる ★ */
-    .status-bar { background: #f9f9f9; border-top: 1px solid #ddd; padding: 4px 15px; font-size: 11px; display: flex; justify-content: space-between; color: #555; user-select: none; }
+    .status-bar { background: #f9f9f9; border-top: 1px solid #ddd; padding: 4px 15px; font-size: var(--ui-font-size); display: flex; justify-content: space-between; color: #555; user-select: none; }
     .status-left { display: flex; align-items: center; gap: 15px; }
     .status-right { display: flex; align-items: center; }
     .status-divider { width: 1px; height: 12px; background: #ccc; margin: 0 15px; }
@@ -83,13 +93,13 @@
 
     /* バージョン情報用モーダル */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2000; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: 12px; font-family: 'Segoe UI', Meiryo, sans-serif; }
+    .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-content h3 { margin-top: 0; font-size: 18px; font-weight: normal; color: #222; }
     .modal-content p { line-height: 1.6; color: #444; }
     .modal-content a { color: #0067c0; text-decoration: none; }
     .modal-content a:hover { text-decoration: underline; }
     .modal-buttons { text-align: right; margin-top: 25px; }
-    .modal-buttons button { padding: 6px 24px; font-size: 12px; cursor: pointer; background: #e5e5e5; border: 1px solid #ccc; border-radius: 4px; color: #000; }
+    .modal-buttons button { padding: 6px 24px; font-size: var(--ui-font-size); cursor: pointer; background: #e5e5e5; border: 1px solid #ccc; border-radius: 4px; color: #000; }
     .modal-buttons button:hover { background: #d5d5d5; }
   </style>
   
@@ -100,7 +110,6 @@
 </head>
 <body>
 
-  <!-- バージョン情報モーダル -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -114,9 +123,8 @@
     </div>
   </div>
 
-  <!-- ★ タブバー ★ -->
+  <!-- タブバー -->
   <div class="tab-bar" id="tab-bar">
-    <!-- タブがここにJavaScriptで生成されます -->
     <div class="add-tab-btn" onclick="menuAction('new')" title="新しいタブを追加">+</div>
   </div>
 
@@ -130,7 +138,6 @@
         <div class="dropdown-item" onclick="menuAction('saveAs')"><span>名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
         
         <div class="dropdown-divider"></div>
-        <!-- ★ 最近使用したファイルをここに直接表示 ★ -->
         <div id="recent-files-container"></div>
         <div class="dropdown-divider"></div>
         
@@ -206,7 +213,7 @@
       });
     }
 
-    // エディタの初期化
+    // エディタの初期化 (フォントサイズ統一: 13px)
     ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/textmate");
@@ -216,15 +223,17 @@
     
     // グローバル設定
     var isWordWrap = false;
-    var currentFontSize = 14;
-    var defaultFontSize = 14;
+    var currentFontSize = 13;
+    var defaultFontSize = 13;
+    editor.setFontSize(currentFontSize);
 
     // ==========================================
-    // ★ タブ管理システム ★
+    // ★ タブ管理システム（D&D並び替え対応）
     // ==========================================
     let tabs = [];
     let activeTabId = null;
     let tabIdCounter = 0;
+    let draggedTabId = null;
 
     function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null, bytes = null) {
       const id = 'tab_' + (++tabIdCounter);
@@ -296,7 +305,6 @@
 
     function renderTabs() {
       const tabBar = document.getElementById('tab-bar');
-      // add-tab-btn 以外の要素を削除
       Array.from(tabBar.children).forEach(child => {
         if (!child.classList.contains('add-tab-btn')) child.remove();
       });
@@ -304,6 +312,34 @@
       tabs.forEach(tab => {
         const tabEl = document.createElement('div');
         tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        
+        // ★ タブの並び替え（ドラッグ＆ドロップ）処理
+        tabEl.draggable = true;
+        tabEl.ondragstart = (e) => {
+          draggedTabId = tab.id;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData('text/plain', tab.id);
+          setTimeout(() => tabEl.style.opacity = '0.5', 0);
+        };
+        tabEl.ondragover = (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        };
+        tabEl.ondrop = (e) => {
+          e.preventDefault();
+          if (draggedTabId && draggedTabId !== tab.id) {
+            const fromIndex = tabs.findIndex(t => t.id === draggedTabId);
+            const toIndex = tabs.findIndex(t => t.id === tab.id);
+            const movedTab = tabs.splice(fromIndex, 1)[0];
+            tabs.splice(toIndex, 0, movedTab);
+            renderTabs();
+          }
+        };
+        tabEl.ondragend = () => {
+          tabEl.style.opacity = '1';
+          draggedTabId = null;
+        };
+        
         tabEl.onclick = () => switchTab(tab.id);
         
         const titleEl = document.createElement('div');
@@ -384,14 +420,13 @@
       const files = await getRecentFiles();
       
       if (files.length === 0) {
-        container.innerHTML = '<div class="dropdown-item disabled" style="padding-left:15px;">履歴がありません</div>';
+        container.innerHTML = '<div class="dropdown-item disabled">履歴がありません</div>';
         return;
       }
       
       files.forEach((f, index) => {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
-        item.style.paddingLeft = '15px'; // サブメニューではなく直接配置のため余白調整
         
         const nameSpan = document.createElement('span');
         nameSpan.innerText = f.name;
@@ -404,7 +439,6 @@
           e.stopPropagation();
           closeMenus();
           try {
-            // 権限の再要求
             const options = { mode: 'readwrite' };
             let hasPerm = false;
             if ((await f.handle.queryPermission(options)) === 'granted') { hasPerm = true; }
@@ -412,7 +446,7 @@
             
             if (hasPerm) {
               const file = await f.handle.getFile();
-              await loadFileProcess(file, f.handle); // 新しいタブで開く
+              await loadFileProcess(file, f.handle);
               await addRecentFile(file.name, f.handle);
             }
           } catch (err) {
@@ -430,7 +464,7 @@
         delSpan.onmouseenter = () => delSpan.style.color = '#d00';
         delSpan.onmouseleave = () => delSpan.style.color = '#bbb';
         delSpan.onclick = async (e) => {
-          e.stopPropagation(); // 削除時はメニューを閉じない
+          e.stopPropagation();
           let currentFiles = await getRecentFiles();
           currentFiles.splice(index, 1);
           await saveRecentFiles(currentFiles);
@@ -535,7 +569,7 @@
         try {
           const [handle] = await window.showOpenFilePicker({ multiple: false });
           const file = await handle.getFile();
-          await loadFileProcess(file, handle); // 新規タブで開く
+          await loadFileProcess(file, handle);
           await addRecentFile(file.name, handle);
         } catch (err) {}
       } else {
@@ -553,7 +587,7 @@
             const handle = await items[0].getAsFileSystemHandle();
             if (handle.kind === 'file') {
               const file = await handle.getFile();
-              await loadFileProcess(file, handle); // 新規タブで開く
+              await loadFileProcess(file, handle);
               await addRecentFile(file.name, handle);
               return;
             }
@@ -569,15 +603,32 @@
       e.target.value = '';
     }
 
-    // ファイルを読み込み、新しいタブを作成してそこに反映する
+    // ★ ファイル読み込み処理（重複防止対応）
     async function loadFileProcess(file, handle) {
+      // 既に同じファイルが開かれていないかチェック
+      for (let tab of tabs) {
+        let isSame = false;
+        if (handle && tab.fileHandle && tab.fileHandle.isSameEntry) {
+          try {
+            if (await handle.isSameEntry(tab.fileHandle)) isSame = true;
+          } catch(e) {}
+        } else if (tab.filename === file.name) {
+          // FileHandleがない場合（フォールバック時）は名前で簡易判定
+          isSame = true;
+        }
+
+        if (isSame) {
+          switchTab(tab.id); // 既存のタブに切り替えて終了
+          return;
+        }
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       const detected = Encoding.detect(bytes) || 'UTF8';
       const unicodeArray = Encoding.convert(bytes, { to: 'UNICODE', from: detected });
       const content = Encoding.codeToString(unicodeArray);
       
-      // もし現在アクティブなタブが「変更されていない無題」なら、そのタブを上書き（タブが増殖しないように）
       const currentTab = getActiveTab();
       if (currentTab && currentTab.filename === "無題" && !currentTab.isDirty && currentTab.session.getValue() === "") {
         currentTab.filename = file.name;
@@ -591,7 +642,6 @@
         renderTabs();
         updateTitleAndStatus();
       } else {
-        // そうでなければ新しいタブとして開く
         createTab(file.name, content, detected, handle, bytes);
       }
     }
@@ -671,7 +721,6 @@
       let idx = encs.indexOf(tab.encoding);
       tab.encoding = encs[(idx + 1) % encs.length];
       
-      // 生のバイトデータがあれば再解釈
       if (tab.bytes) {
         const unicodeArray = Encoding.convert(tab.bytes, { to: 'UNICODE', from: tab.encoding });
         tab.session.setValue(Encoding.codeToString(unicodeArray));
@@ -769,12 +818,10 @@
       });
     }
 
-    // アプリ起動時の初期化
     initDB().then(() => {
       updateRecentMenu();
     });
     
-    // 最初の空タブを作成
     createTab();
   </script>
 </body>
