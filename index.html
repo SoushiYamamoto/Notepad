@@ -41,13 +41,16 @@
     /* エディタとステータスバー */
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
-    .status-bar { background: #f3f3f3; border-top: 1px solid #ccc; padding: 2px 15px; font-size: 11px; display: flex; justify-content: flex-end; gap: 30px; color: #333; user-select: none; }
+    /* ステータスバーのレイアウトを修正し、左右に要素を配置できるようにしました */
+    .status-bar { background: #f3f3f3; border-top: 1px solid #ccc; padding: 2px 15px; font-size: 11px; display: flex; justify-content: space-between; color: #333; user-select: none; }
+    .status-right { display: flex; gap: 30px; }
+    
     .clickable-status { cursor: pointer; color: #000; padding: 0 5px; }
     .clickable-status:hover { background: #e5e5e5; }
     
     #fileInputFallback { display: none; }
 
-    /* ★ バージョン情報用モーダル（ダイアログ）のスタイル ★ */
+    /* バージョン情報用モーダル */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.4); z-index: 2000;
@@ -148,7 +151,6 @@
     <div class="menu-container">
       <div class="menu-item-btn" onclick="handleMenuClick('menu-help', event)" onmouseenter="handleMenuHover('menu-help', event)">ヘルプ(H)</div>
       <div id="menu-help" class="dropdown">
-        <!-- ★ alert()から自作モーダルの呼び出しに変更 ★ -->
         <div class="dropdown-item" onclick="showAboutModal()">バージョン情報(A)</div>
       </div>
     </div>
@@ -158,10 +160,15 @@
   <div id="editor"></div>
   
   <div class="status-bar">
-    <div id="pos-info">1 行, 1 列</div>
-    <div id="mode-info">TEXT</div>
-    <div id="enc-info" class="clickable-status" onclick="switchEncoding()" title="クリックで文字コードを変更">UTF-8</div>
-    <div>Windows (CRLF)</div>
+    <!-- ★ 左側にファイル名と更新マークを表示するエリアを追加 ★ -->
+    <div id="file-info" style="font-weight: bold;">無題</div>
+    
+    <div class="status-right">
+      <div id="pos-info">1 行, 1 列</div>
+      <div id="mode-info">TEXT</div>
+      <div id="enc-info" class="clickable-status" onclick="switchEncoding()" title="クリックで文字コードを変更">UTF-8</div>
+      <div>Windows (CRLF)</div>
+    </div>
   </div>
 
   <script>
@@ -196,13 +203,7 @@
     var isDirty = false;
     
     editor.on("input", function() {
-      if(!editor.session.getUndoManager().isClean()) {
-        isDirty = true;
-        document.title = `*メモ帳 - ${currentFilename}`;
-      } else {
-        isDirty = false;
-        document.title = `メモ帳 - ${currentFilename}`;
-      }
+      updateTitleAndStatus();
     });
 
     // ----- バージョン情報モーダルの制御 -----
@@ -269,11 +270,7 @@
 
     document.addEventListener('click', e => {
       if (!e.target.closest('.menu-container')) closeMenus();
-      
-      // モーダルの外側をクリックしたら閉じる処理
-      if (e.target === document.getElementById('aboutModal')) {
-        closeAboutModal();
-      }
+      if (e.target === document.getElementById('aboutModal')) closeAboutModal();
     });
 
     async function menuAction(action) {
@@ -496,9 +493,18 @@
       document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
     }
 
+    // ★ ステータスバー左側にファイル名と変更状態（*）を表示するよう修正 ★
     function updateTitleAndStatus() {
       isDirty = !editor.session.getUndoManager().isClean();
-      document.title = (isDirty ? "*" : "") + `メモ帳 - ${currentFilename}`;
+      const prefix = isDirty ? "*" : "";
+      
+      // ウィンドウタイトル（PWAではあまり見えませんが念のため残します）
+      document.title = prefix + `メモ帳 - ${currentFilename}`;
+      
+      // ステータスバー左側のファイル名表示
+      document.getElementById('file-info').innerText = prefix + currentFilename;
+      
+      // 右側の文字コード表示
       document.getElementById('enc-info').innerText = currentEncoding;
     }
 
