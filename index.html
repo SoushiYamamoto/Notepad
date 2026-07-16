@@ -96,24 +96,26 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* 検索・置換ダイアログ */
+    /* ★ 検索・置換ダイアログのスタイル完全最適化（はみ出し防止） ★ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
       font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
-      user-select: none; width: 440px; border-radius: 2px; box-sizing: border-box; margin: 0;
+      user-select: none; width: 480px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0;
     }
     .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
-    .win-dialog-content { display: flex; gap: 15px; width: 100%; box-sizing: border-box; }
-    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; min-width: 0; }
+    .win-dialog-content { display: flex; gap: 10px; width: 100%; box-sizing: border-box; }
+    .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; }
     .win-dialog-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .win-dialog-label { width: 125px; min-width: 125px; white-space: nowrap; display: inline-block; text-align: left; }
+    .win-dialog-label { width: 130px; min-width: 130px; white-space: nowrap; display: inline-block; text-align: left; }
     .win-dialog-input { flex: 1; padding: 3px 5px; border: 1px solid #7a7a7a; font-size: 12px; background: #fff; color: #000; outline: none; box-sizing: border-box; min-width: 0; width: 100%; }
     .win-dialog-input:focus { border-color: #0078d7; }
-    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 100px; min-width: 100px; flex-shrink: 0; }
-    .win-dialog-btn { padding: 4px 0; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .win-dialog-right { display: flex; flex-direction: column; gap: 6px; width: 110px; min-width: 110px; flex-shrink: 0; }
+    .win-dialog-btn { padding: 4px 8px; font-size: 12px; background: #e1e1e1; border: 1px solid #adadad; text-align: center; cursor: default; border-radius: 2px; box-sizing: border-box; width: 100%; white-space: nowrap; }
     .win-dialog-btn:hover { background: #e5f1fb; border-color: #0078d7; }
+    
     .win-dialog-group { border: 1px solid #d0d0d0; padding: 8px 10px; position: relative; margin-top: 5px; display: flex; gap: 10px;}
     .win-dialog-group-title { position: absolute; top: -8px; left: 8px; background: #f0f0f0; padding: 0 4px; font-size: 11px; color: #444; }
 
@@ -158,7 +160,7 @@
 
   <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
-  <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
+  <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
       <span>検索</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
@@ -185,7 +187,7 @@
     </div>
   </div>
 
-  <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 220px);">
+  <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
       <span>置換</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
@@ -346,24 +348,22 @@
     }
     editor.on('changeSelection', updateCursorStatus);
 
-    // Aceエディタ内部の検索機能を完全に削除
-    if (editor.commands.commands.find) editor.commands.removeCommand('find');
-    if (editor.commands.commands.replace) editor.commands.removeCommand('replace');
-    
-    editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => menuAction('save') });
-    editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => menuAction('saveAs') });
-    editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => menuAction('open') });
-    editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => printContent() });
+    // ★ Ace内部のショートカットコマンドを安全に上書き ★
+    editor.commands.addCommand({ name: 'find', bindKey: {win: 'Ctrl-F', mac: 'Command-F'}, exec: () => { openWinFind(); return false; }, readOnly: true });
+    editor.commands.addCommand({ name: 'replace', bindKey: {win: 'Ctrl-H', mac: 'Command-H'}, exec: () => { openWinReplace(); return false; }, readOnly: true });
+    editor.commands.addCommand({ name: 'save', bindKey: {win: 'Ctrl-S', mac: 'Command-S'}, exec: () => { menuAction('save'); return false; } });
+    editor.commands.addCommand({ name: 'saveAs', bindKey: {win: 'Ctrl-Shift-S', mac: 'Command-Shift-S'}, exec: () => { menuAction('saveAs'); return false; } });
+    editor.commands.addCommand({ name: 'open', bindKey: {win: 'Ctrl-O', mac: 'Command-O'}, exec: () => { menuAction('open'); return false; } });
+    editor.commands.addCommand({ name: 'print', bindKey: {win: 'Ctrl-P', mac: 'Command-P'}, exec: () => { printContent(); return false; } });
 
-    // ★ ブラウザの標準検索等を強力にブロック ★
+    // ウィンドウレベルでのショートカットキャプチャ（Chrome標準機能ブロック）
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey) {
-        const keyStr = (e.key || '').toLowerCase();
-        if (e.code === 'KeyF' || keyStr === 'f') { e.preventDefault(); e.stopPropagation(); openWinFind(); return false; } 
-        if (e.code === 'KeyH' || keyStr === 'h') { e.preventDefault(); e.stopPropagation(); openWinReplace(); return false; } 
-        if (e.code === 'KeyS' || keyStr === 's') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false; } 
-        if (e.code === 'KeyO' || keyStr === 'o') { e.preventDefault(); e.stopPropagation(); menuAction('open'); return false; } 
-        if (e.code === 'KeyP' || keyStr === 'p') { e.preventDefault(); e.stopPropagation(); printContent(); return false; }
+        if (e.code === 'KeyF' || e.key === 'f' || e.key === 'F') { e.preventDefault(); e.stopPropagation(); openWinFind(); return false; } 
+        if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H') { e.preventDefault(); e.stopPropagation(); openWinReplace(); return false; } 
+        if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) menuAction('saveAs'); else menuAction('save'); return false; } 
+        if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O') { e.preventDefault(); e.stopPropagation(); menuAction('open'); return false; } 
+        if (e.code === 'KeyP' || e.key === 'p' || e.key === 'P') { e.preventDefault(); e.stopPropagation(); printContent(); return false; }
       } else if (e.key === 'F5') { e.preventDefault(); insertTimeDate(); }
     }, { capture: true, passive: false });
 
@@ -379,7 +379,7 @@
       
       const dialog = document.getElementById('winFindDialog');
       if (!dialog.style.left || dialog.style.left.includes('%')) {
-          dialog.style.left = (window.innerWidth / 2 - 230) + 'px';
+          dialog.style.left = (window.innerWidth / 2 - 240) + 'px';
           dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0';
       }
       document.getElementById('winDialogOverlay').style.display = 'block';
@@ -396,7 +396,7 @@
       
       const dialog = document.getElementById('winReplaceDialog');
       if (!dialog.style.left || dialog.style.left.includes('%')) {
-          dialog.style.left = (window.innerWidth / 2 - 230) + 'px';
+          dialog.style.left = (window.innerWidth / 2 - 240) + 'px';
           dialog.style.top = '25%'; dialog.style.transform = 'none'; dialog.style.margin = '0';
       }
       document.getElementById('winDialogOverlay').style.display = 'block';
@@ -475,7 +475,7 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      // 他ウィンドウから「受け取ったよ」という合図が来たら、こちらのタブを消去する
+      // 別のウィンドウから「データを受け取った」という合図が来たときだけ、こちらの古いタブを消去する
       if (event.data.type === 'tabs-adopted' && event.data.transferId === currentDragTransferId) {
         removeDraggedTabsLocally();
       }
@@ -527,7 +527,7 @@
       selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        // 最後のタブを消した場合はウィンドウごと閉じる
+        // 最後のタブを消した場合はウィンドウを閉じる
         window.close(); 
         setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
       } else {
@@ -547,7 +547,9 @@
         if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
         
         tabEl.draggable = true;
-        tabEl.ondragstart = async (e) => {
+        
+        // ★ ドラッグ開始処理（同期処理） ★
+        tabEl.ondragstart = (e) => {
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
           transferringTabIds = Array.from(selectedTabs); currentDragTransferId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           
@@ -621,11 +623,11 @@
           ghostElement.appendChild(ghostBody);
           document.body.appendChild(ghostElement);
           
-          // ★ Yオフセットを15に減らして、タブ部分を掴んでいるように調整 ★
           e.dataTransfer.setDragImage(ghostElement, 40, 15);
 
+          // 非同期保存はイベントの最後に逃がす
           const payload = transferringTabIds.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle }; });
-          await saveTransferData(currentDragTransferId, payload);
+          saveTransferData(currentDragTransferId, payload);
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
@@ -646,19 +648,17 @@
 
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
-          // ★ ウィンドウが重複して開く問題の最終解決 ★
+          // ★ ドラッグ終了時に、ストレージを使って「他のウィンドウが受け取ったか」を同期的にチェック ★
           if (currentDragTransferId) {
              const tid = currentDragTransferId;
-             // Timeoutを長め(500ms)に取り、他のウィンドウからの「受け取った」合図を確実に待つ
-             setTimeout(async () => {
-                 // もし currentDragTransferId がまだ tid のままなら、他のウィンドウには受け取られなかった（外に落とされた）と判断
-                 if (currentDragTransferId === tid) {
-                     const payload = await getTransferData(tid);
-                     if (payload) {
-                         window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
-                     }
-                 }
-             }, 500);
+             const isAdopted = localStorage.getItem('tab_adopted_sync') === tid;
+             
+             if (!isAdopted) {
+                 // 誰も受け取っていない＝外に出された
+                 window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600');
+             }
+             
+             localStorage.removeItem('tab_adopted_sync');
           }
           draggedTabId = null; 
         };
@@ -682,7 +682,15 @@
     tabBar.ondragleave = (e) => tabBar.classList.remove('drag-over-empty');
     tabBar.ondrop = (e) => { e.preventDefault(); tabBar.classList.remove('drag-over-empty'); handleTabDrop(e, null, null); };
 
-    // ★ エディタクリック時の複数選択解除バグ修正（意図しない解除を防ぐ） ★
+    // ★ エディタ部分をクリックした時の「複数選択解除」 ★
+    document.getElementById('editor').addEventListener('mousedown', () => {
+      if (selectedTabs.size > 1) { 
+          selectedTabs.clear(); 
+          if (activeTabId) selectedTabs.add(activeTabId); 
+          renderTabs(); 
+      }
+    }, true);
+    
     document.addEventListener('mousedown', e => {
       if (!e.target.closest('.menu-container')) closeMenus();
     });
@@ -695,7 +703,8 @@
       if (!transferId) transferId = localStorage.getItem('notepad_last_transfer_id');
       
       if (transferId && transferId !== currentDragTransferId) {
-        // ★ ドロップを受け取った側が「最優先で」合図を送り、相手が余計なウィンドウを開くのを防ぐ ★
+        // ★ 他のウィンドウからドロップされた場合、同期的に受け取りフラグを立てる ★
+        localStorage.setItem('tab_adopted_sync', transferId);
         bc.postMessage({ type: 'tabs-adopted', transferId });
         
         const payload = await getTransferData(transferId);
@@ -716,7 +725,10 @@
           renderTabs(); if(lastId) switchTab(lastId); 
         }
       } else if (transferringTabIds.length > 0) {
-        // 同一ウィンドウ内の並び替え
+        // ★ 同一ウィンドウ内での並び替え ★
+        // 自分自身で受け取った場合も、新規ウィンドウが開かないようにフラグを立てる
+        localStorage.setItem('tab_adopted_sync', currentDragTransferId);
+        
         let toIndex = tabs.length;
         let isLeft = true;
         if (targetEl && targetTabId) { 
@@ -747,10 +759,8 @@
         
         tabs.splice(toIndex, 0, ...movedTabs); 
         
-        // 自ウィンドウ内での移動完了なので、新規ウィンドウが開かないようにIDをクリアする
         if (currentDragTransferId) {
            await deleteTransferData(currentDragTransferId);
-           currentDragTransferId = null;
         }
         
         renderTabs();
@@ -969,8 +979,7 @@
       if (urlTransferId) {
         const payload = await getTransferData(urlTransferId);
         if (payload && Array.isArray(payload)) {
-          // データを開けた場合は直ちに元のウィンドウへ合図を送る
-          bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
+          // ここでは合図を出さず、データの復元に集中する（同期ロジックで既に処理されているため）
           await deleteTransferData(urlTransferId);
           selectedTabs.clear();
           
@@ -982,9 +991,8 @@
           renderTabs();
           window.history.replaceState({}, document.title, window.location.pathname);
         } else { 
-          // ★ もしデータがなければ、他のウィンドウに先を越された(空振り)と判断してこのウィンドウを閉じる ★
+          // データがない場合は空振りのためウィンドウを閉じる
           window.close();
-          // もし閉じれなかった場合のみ無題を作る
           setTimeout(() => { if (tabs.length === 0) createTab(); }, 200); 
         }
       } else { createTab(); }
