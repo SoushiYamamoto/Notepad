@@ -32,7 +32,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
   if (url.origin === location.origin) {
-    // クエリパラメータを取り除いた純粋なURLパスでキャッシュを探す
     const cleanUrl = url.pathname;
     event.respondWith(
       caches.match(cleanUrl).then((response) => {
