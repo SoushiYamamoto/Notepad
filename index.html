@@ -14,7 +14,6 @@
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
-    /* タブバー */
     .tab-bar { display: flex; background: #e8eaed; padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
@@ -24,8 +23,10 @@
     .tab:hover { background: #e0e0e0; }
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
-    .tab.drag-over-left::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; }
-    .tab.drag-over-right::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; }
+    
+    /* ★ ドロップ位置の青い線をタブとタブの間に表示 ★ */
+    .tab.drag-over-left::before { content: ""; position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; pointer-events: none; }
+    .tab.drag-over-right::after { content: ""; position: absolute; right: -2px; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; pointer-events: none; }
 
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close { margin-left: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
@@ -33,7 +34,6 @@
     .add-tab-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; font-size: 18px; color: #555; -webkit-app-region: no-drag; }
     .add-tab-btn:hover { background: #d0d0d0; }
 
-    /* メニューバー */
     .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
     .menu-container { position: relative; }
     .menu-item-btn { padding: 6px 12px; cursor: default; border-radius: 4px; }
@@ -53,7 +53,6 @@
 
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
-    /* ステータスバー */
     .status-bar { background: #f9f9f9; border-top: 1px solid #ddd; padding: 4px 15px; font-size: var(--ui-font-size); display: flex; justify-content: space-between; color: #555; user-select: none; }
     .status-left { display: flex; align-items: center; gap: 15px; }
     .status-right { display: flex; align-items: center; }
@@ -63,7 +62,6 @@
     
     #fileInputFallback { display: none; }
 
-    /* モーダル群 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2400; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-buttons { text-align: right; margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
@@ -71,7 +69,6 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
-    /* 検索・置換ダイアログ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
@@ -106,57 +103,72 @@
 </head>
 <body>
 
-  <!-- ダイアログ群 -->
-  <div id="aboutModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>バージョン情報</h3>
-      <p>ブラウザ上で動くメモ帳アプリ（タブ対応版）です。</p>
-      <div class="modal-buttons"><button onclick="closeModals()">OK</button></div>
+  <!-- ★ バージョン情報モーダル ★ -->
+  <div id="aboutModal" class="modal-overlay" onclick="closeModals()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 data-i18n="about_title">バージョン情報</h3>
+      <p><span data-i18n="about_desc">ブラウザ上で動くメモ帳アプリ（タブ対応版）です。</span></p>
+      <p><b>Version 0.8</b></p>
+      <p>Developer: <a target="_blank" href="https://www.linkedin.com/in/soushi/">Soushi Yamamoto</a></p>
+      <p>Credit: <a target="_blank" href="https://icons8.com/icon/U9EYLFu65LVf/notepad">メモ帳</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a></p>
+      <div class="modal-buttons"><button onclick="closeModals()" data-i18n="btn_ok">OK</button></div>
     </div>
   </div>
 
-  <div id="installModal" class="modal-overlay">
-    <div class="modal-content">
-      <h3>アプリのインストール</h3>
-      <p>このアプリをパソコンにインストールすると、以下の機能が利用できます。</p>
+  <div id="installModal" class="modal-overlay" onclick="closeModals()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 data-i18n="install_title">アプリのインストール</h3>
+      <p data-i18n="install_desc">このアプリをパソコンにインストールすると、以下の機能が利用できます。</p>
       <ul style="padding-left: 20px; color: #444;">
         <li>オフライン状態でのアプリの起動と編集</li>
         <li>テキストファイル (.txt, .csv等) のダブルクリック起動</li>
         <li>独立した美しいウィンドウでの表示</li>
       </ul>
       <div class="modal-buttons">
-        <button onclick="closeModals()">後で</button>
-        <button class="primary" onclick="installApp()">インストールする</button>
+        <button onclick="closeModals()" data-i18n="install_later">後で</button>
+        <button class="primary" onclick="installApp()" data-i18n="install_btn">インストールする</button>
       </div>
     </div>
   </div>
 
-  <div id="winDialogOverlay" class="modal-overlay" onclick="closeAllWinDialogs()"></div>
+  <!-- ★ 言語設定モーダル ★ -->
+  <div id="langModal" class="modal-overlay" onclick="closeModals()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 data-i18n="lang_title">言語設定 (Language)</h3>
+      <select id="langSelect" style="width: 100%; padding: 8px; margin-bottom: 20px; font-size: 14px;"></select>
+      <div class="modal-buttons">
+        <button onclick="closeModals()" data-i18n="dlg_cancel">キャンセル</button>
+        <button class="primary" onclick="applyLanguage()" data-i18n="btn_ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
 
   <!-- 検索ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winFindDialog')">
-      <span>検索</span>
+      <span data-i18n="dlg_find">検索</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
     </div>
     <div class="win-dialog-content">
       <div class="win-dialog-left">
         <div class="win-dialog-row">
-          <span class="win-dialog-label">検索する文字列(N):</span>
+          <span class="win-dialog-label" data-i18n="dlg_find_what">検索する文字列(N):</span>
           <input type="text" id="winFindInput" class="win-dialog-input">
         </div>
         <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px; gap: 5px;">
-          <label style="margin-bottom: 5px; white-space: nowrap;"><input type="checkbox" id="winFindMatchCase"> 大文字と小文字を区別(C)</label>
+          <label style="margin-bottom: 5px; white-space: nowrap;"><input type="checkbox" id="winFindMatchCase"> <span data-i18n="dlg_match_case">大文字と小文字を区別(C)</span></label>
           <div class="win-dialog-group">
-            <span class="win-dialog-group-title">検索方向</span>
-            <label style="white-space: nowrap;"><input type="radio" name="winFindDir" value="up"> 上へ(U)</label>
-            <label style="white-space: nowrap;"><input type="radio" name="winFindDir" value="down" checked> 下へ(D)</label>
+            <span class="win-dialog-group-title" data-i18n="dlg_dir">検索方向</span>
+            <label style="white-space: nowrap;"><input type="radio" name="winFindDir" value="up"> <span data-i18n="dlg_up">上へ(U)</span></label>
+            <label style="white-space: nowrap;"><input type="radio" name="winFindDir" value="down" checked> <span data-i18n="dlg_down">下へ(D)</span></label>
           </div>
         </div>
       </div>
       <div class="win-dialog-right">
-        <div class="win-dialog-btn" onclick="execWinFind()">次を検索(F)</div>
-        <div class="win-dialog-btn" onclick="closeAllWinDialogs()">キャンセル</div>
+        <div class="win-dialog-btn" onclick="execWinFind()" data-i18n="dlg_find_next">次を検索(F)</div>
+        <div class="win-dialog-btn" onclick="closeAllWinDialogs()" data-i18n="dlg_cancel">キャンセル</div>
       </div>
     </div>
   </div>
@@ -164,94 +176,94 @@
   <!-- 置換ダイアログ -->
   <div id="winReplaceDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
     <div class="win-dialog-header" onmousedown="startDragDialog(event, 'winReplaceDialog')">
-      <span>置換</span>
+      <span data-i18n="dlg_replace">置換</span>
       <span class="win-dialog-close" onclick="closeAllWinDialogs()">×</span>
     </div>
     <div class="win-dialog-content">
       <div class="win-dialog-left">
         <div class="win-dialog-row">
-          <span class="win-dialog-label">検索する文字列(N):</span>
+          <span class="win-dialog-label" data-i18n="dlg_find_what">検索する文字列(N):</span>
           <input type="text" id="winReplaceFindInput" class="win-dialog-input">
         </div>
         <div class="win-dialog-row">
-          <span class="win-dialog-label">置換後の文字列(P):</span>
+          <span class="win-dialog-label" data-i18n="dlg_replace_with">置換後の文字列(P):</span>
           <input type="text" id="winReplaceWithInput" class="win-dialog-input">
         </div>
         <div style="margin-top: 15px;">
-          <label style="white-space: nowrap;"><input type="checkbox" id="winReplaceMatchCase"> 大文字と小文字を区別(C)</label>
+          <label style="white-space: nowrap;"><input type="checkbox" id="winReplaceMatchCase"> <span data-i18n="dlg_match_case">大文字と小文字を区別(C)</span></label>
         </div>
       </div>
       <div class="win-dialog-right">
-        <div class="win-dialog-btn" onclick="execWinReplaceFind()">次を検索(F)</div>
-        <div class="win-dialog-btn" onclick="execWinReplaceOne()">置換して次に(R)</div>
-        <div class="win-dialog-btn" onclick="execWinReplaceAll()">すべて置換(A)</div>
-        <div class="win-dialog-btn" onclick="closeAllWinDialogs()">キャンセル</div>
+        <div class="win-dialog-btn" onclick="execWinReplaceFind()" data-i18n="dlg_find_next">次を検索(F)</div>
+        <div class="win-dialog-btn" onclick="execWinReplaceOne()" data-i18n="dlg_replace_btn">置換して次に(R)</div>
+        <div class="win-dialog-btn" onclick="execWinReplaceAll()" data-i18n="dlg_replace_all">すべて置換(A)</div>
+        <div class="win-dialog-btn" onclick="closeAllWinDialogs()" data-i18n="dlg_cancel">キャンセル</div>
       </div>
     </div>
   </div>
 
-  <!-- メインUI -->
   <div class="tab-bar" id="tab-bar">
-    <div class="add-tab-btn" onclick="menuAction('new')" title="新しいタブを追加">+</div>
+    <div class="add-tab-btn" onclick="menuAction('new')" title="New Tab">+</div>
   </div>
 
   <div class="menu-bar">
     <div class="menu-container">
-      <div class="menu-item-btn" onclick="handleMenuClick('menu-file', event)" onmouseenter="handleMenuHover('menu-file', event)">ファイル</div>
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-file', event)" onmouseenter="handleMenuHover('menu-file', event)" data-i18n="file">ファイル</div>
       <div id="menu-file" class="dropdown">
-        <div class="dropdown-item" onclick="menuAction('new')"><span>新規(N)</span><span class="shortcut">Ctrl+N</span></div>
-        <div class="dropdown-item" onclick="menuAction('open')"><span>開く(O)...</span><span class="shortcut">Ctrl+O</span></div>
-        <div class="dropdown-item" id="menu-save" onclick="menuAction('save')"><span id="menu-save-text">保存(S)</span><span class="shortcut">Ctrl+S</span></div>
-        <div class="dropdown-item" onclick="menuAction('saveAs')"><span>名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
+        <div class="dropdown-item" onclick="menuAction('new')"><span data-i18n="new">新規(N)</span><span class="shortcut">Ctrl+N</span></div>
+        <div class="dropdown-item" onclick="menuAction('open')"><span data-i18n="open">開く(O)...</span><span class="shortcut">Ctrl+O</span></div>
+        <div class="dropdown-item" id="menu-save" onclick="menuAction('save')"><span id="menu-save-text" data-i18n="save">保存(S)</span><span class="shortcut">Ctrl+S</span></div>
+        <div class="dropdown-item" onclick="menuAction('saveAs')"><span data-i18n="save_as">名前を付けて保存(A)...</span><span class="shortcut">Ctrl+Shift+S</span></div>
         <div class="dropdown-divider"></div>
         <div id="recent-files-container"></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="printContent()"><span>印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
+        <div class="dropdown-item" onclick="printContent()"><span data-i18n="print">印刷(P)...</span><span class="shortcut">Ctrl+P</span></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="window.close()"><span>終了(X)</span></div>
+        <div class="dropdown-item" onclick="window.close()"><span data-i18n="exit">終了(X)</span></div>
       </div>
     </div>
 
     <div class="menu-container">
-      <div class="menu-item-btn" onclick="handleMenuClick('menu-edit', event)" onmouseenter="handleMenuHover('menu-edit', event)">編集</div>
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-edit', event)" onmouseenter="handleMenuHover('menu-edit', event)" data-i18n="edit">編集</div>
       <div id="menu-edit" class="dropdown">
-        <div class="dropdown-item" id="menu-undo" onclick="editor.undo(); closeMenus();"><span>元に戻す(U)</span><span class="shortcut">Ctrl+Z</span></div>
-        <div class="dropdown-item" id="menu-redo" onclick="editor.redo(); closeMenus();"><span>やり直し(R)</span><span class="shortcut">Ctrl+Y</span></div>
+        <div class="dropdown-item" id="menu-undo" onclick="editor.undo(); closeMenus();"><span data-i18n="undo">元に戻す(U)</span><span class="shortcut">Ctrl+Z</span></div>
+        <div class="dropdown-item" id="menu-redo" onclick="editor.redo(); closeMenus();"><span data-i18n="redo">やり直し(R)</span><span class="shortcut">Ctrl+Y</span></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" id="menu-cut" onclick="execCmd('cut')"><span>切り取り(T)</span><span class="shortcut">Ctrl+X</span></div>
-        <div class="dropdown-item" id="menu-copy" onclick="execCmd('copy')"><span>コピー(C)</span><span class="shortcut">Ctrl+C</span></div>
-        <div class="dropdown-item" onclick="execCmd('paste')"><span>貼り付け(P)</span><span class="shortcut">Ctrl+V</span></div>
-        <div class="dropdown-item" id="menu-delete" onclick="editor.removeWordRight(); closeMenus();"><span>削除(L)</span><span class="shortcut">Del</span></div>
+        <div class="dropdown-item" id="menu-cut" onclick="execCmd('cut')"><span data-i18n="cut">切り取り(T)</span><span class="shortcut">Ctrl+X</span></div>
+        <div class="dropdown-item" id="menu-copy" onclick="execCmd('copy')"><span data-i18n="copy">コピー(C)</span><span class="shortcut">Ctrl+C</span></div>
+        <div class="dropdown-item" onclick="execCmd('paste')"><span data-i18n="paste">貼り付け(P)</span><span class="shortcut">Ctrl+V</span></div>
+        <div class="dropdown-item" id="menu-delete" onclick="editor.removeWordRight(); closeMenus();"><span data-i18n="delete">削除(L)</span><span class="shortcut">Del</span></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="openWinFind()"><span>検索(F)...</span><span class="shortcut">Ctrl+F</span></div>
-        <div class="dropdown-item" onclick="openWinReplace()"><span>置換(R)...</span><span class="shortcut">Ctrl+H</span></div>
+        <div class="dropdown-item" onclick="openWinFind()"><span data-i18n="find">検索(F)...</span><span class="shortcut">Ctrl+F</span></div>
+        <div class="dropdown-item" onclick="openWinReplace()"><span data-i18n="replace">置換(R)...</span><span class="shortcut">Ctrl+H</span></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="editor.selectAll(); closeMenus();"><span>すべて選択(A)</span><span class="shortcut">Ctrl+A</span></div>
-        <div class="dropdown-item" onclick="insertTimeDate()"><span>日付と時刻(D)</span><span class="shortcut">F5</span></div>
+        <div class="dropdown-item" onclick="editor.selectAll(); closeMenus();"><span data-i18n="select_all">すべて選択(A)</span><span class="shortcut">Ctrl+A</span></div>
+        <div class="dropdown-item" onclick="insertTimeDate()"><span data-i18n="time_date">日付と時刻(D)</span><span class="shortcut">F5</span></div>
       </div>
     </div>
 
     <div class="menu-container">
-      <div class="menu-item-btn" onclick="handleMenuClick('menu-format', event)" onmouseenter="handleMenuHover('menu-format', event)">表示</div>
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-format', event)" onmouseenter="handleMenuHover('menu-format', event)" data-i18n="view">表示</div>
       <div id="menu-format" class="dropdown">
-        <div class="dropdown-item has-submenu">ズーム(Z)
+        <div class="dropdown-item has-submenu"><span data-i18n="zoom">ズーム(Z)</span>
           <div class="submenu">
-            <div class="dropdown-item" onclick="changeZoom(1)"><span>拡大(I)</span><span class="shortcut">Ctrl+Plus</span></div>
-            <div class="dropdown-item" onclick="changeZoom(-1)"><span>縮小(O)</span><span class="shortcut">Ctrl+Minus</span></div>
-            <div class="dropdown-item" onclick="changeZoom(0)"><span>既定の倍率に戻す(R)</span><span class="shortcut">Ctrl+0</span></div>
+            <div class="dropdown-item" onclick="changeZoom(1)"><span data-i18n="zoom_in">拡大(I)</span><span class="shortcut">Ctrl+Plus</span></div>
+            <div class="dropdown-item" onclick="changeZoom(-1)"><span data-i18n="zoom_out">縮小(O)</span><span class="shortcut">Ctrl+Minus</span></div>
+            <div class="dropdown-item" onclick="changeZoom(0)"><span data-i18n="zoom_restore">既定の倍率に戻す(R)</span><span class="shortcut">Ctrl+0</span></div>
           </div>
         </div>
-        <div class="dropdown-item" onclick="toggleWordWrap()" id="menu-wrap-check">右端で折り返す(W)</div>
+        <div class="dropdown-item" onclick="toggleWordWrap()" id="menu-wrap-check"><span data-i18n="word_wrap">右端で折り返す(W)</span></div>
       </div>
     </div>
 
     <div class="menu-container">
-      <div class="menu-item-btn" onclick="handleMenuClick('menu-help', event)" onmouseenter="handleMenuHover('menu-help', event)">設定</div>
+      <div class="menu-item-btn" onclick="handleMenuClick('menu-help', event)" onmouseenter="handleMenuHover('menu-help', event)" data-i18n="settings">設定</div>
       <div id="menu-help" class="dropdown">
-        <div class="dropdown-item" onclick="menuAction('font')">フォントサイズ...</div>
-        <div class="dropdown-item" id="menu-install-btn" style="display:none;" onclick="installApp()">アプリのインストール...</div>
+        <div class="dropdown-item" onclick="menuAction('font')"><span data-i18n="font_size">フォントサイズ...</span></div>
+        <div class="dropdown-item" onclick="openLangModal()"><span data-i18n="lang">言語設定 (Language)...</span></div>
+        <div class="dropdown-item" id="menu-install-btn" style="display:none;" onclick="installApp()"><span data-i18n="install">アプリのインストール...</span></div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="showAboutModal()">バージョン情報(A)</div>
+        <div class="dropdown-item" onclick="showAboutModal()"><span data-i18n="about">バージョン情報(A)</span></div>
       </div>
     </div>
   </div>
@@ -275,7 +287,84 @@
   </div>
 
   <script>
-    console.log('[DEBUG] App Initialized.');
+    // ==========================================
+    // 多言語辞書 (Top 25)
+    // ==========================================
+    const defaultEn = { file: "File", edit: "Edit", view: "View", settings: "Settings", new: "New", open: "Open...", save: "Save", save_as: "Save As...", print: "Print...", exit: "Exit", undo: "Undo", redo: "Redo", cut: "Cut", copy: "Copy", paste: "Paste", delete: "Delete", find: "Find...", replace: "Replace...", select_all: "Select All", time_date: "Time/Date", zoom: "Zoom", zoom_in: "Zoom In", zoom_out: "Zoom Out", zoom_restore: "Restore Default Zoom", word_wrap: "Word Wrap", font_size: "Font Size...", install: "Install App...", lang: "Language...", about: "About", dlg_find: "Find", dlg_find_what: "Find what:", dlg_match_case: "Match case", dlg_dir: "Direction", dlg_up: "Up", dlg_down: "Down", dlg_find_next: "Find Next", dlg_cancel: "Cancel", dlg_replace: "Replace", dlg_replace_with: "Replace with:", dlg_replace_btn: "Replace", dlg_replace_all: "Replace All", about_title: "About", about_desc: "Browser-based Notepad app with tabs.", btn_ok: "OK", lang_title: "Language", install_title: "Install App", install_desc: "Installing this app gives you the following features:", install_later: "Later", install_btn: "Install" };
+
+    const translations = {
+      ja: { name: "日本語 (Japanese)", texts: { file: "ファイル", edit: "編集", view: "表示", settings: "設定", new: "新規(N)", open: "開く(O)...", save: "保存(S)", save_as: "名前を付けて保存(A)...", print: "印刷(P)...", exit: "終了(X)", undo: "元に戻す(U)", redo: "やり直し(R)", cut: "切り取り(T)", copy: "コピー(C)", paste: "貼り付け(P)", delete: "削除(L)", find: "検索(F)...", replace: "置換(R)...", select_all: "すべて選択(A)", time_date: "日付と時刻(D)", zoom: "ズーム(Z)", zoom_in: "拡大(I)", zoom_out: "縮小(O)", zoom_restore: "既定の倍率に戻す(R)", word_wrap: "右端で折り返す(W)", font_size: "フォントサイズ...", install: "アプリのインストール...", lang: "言語設定 (Language)...", about: "バージョン情報(A)", dlg_find: "検索", dlg_find_what: "検索する文字列(N):", dlg_match_case: "大文字と小文字を区別(C)", dlg_dir: "検索方向", dlg_up: "上へ(U)", dlg_down: "下へ(D)", dlg_find_next: "次を検索(F)", dlg_cancel: "キャンセル", dlg_replace: "置換", dlg_replace_with: "置換後の文字列(P):", dlg_replace_btn: "置換して次に(R)", dlg_replace_all: "すべて置換(A)", about_title: "バージョン情報", about_desc: "ブラウザ上で動くメモ帳アプリ（タブ対応版）です。", btn_ok: "OK", lang_title: "言語設定 (Language)", install_title: "アプリのインストール", install_desc: "このアプリをパソコンにインストールすると、以下の機能が利用できます。", install_later: "後で", install_btn: "インストールする" } },
+      en: { name: "English", texts: defaultEn },
+      zh: { name: "简体中文 (Chinese)", texts: { file: "文件", edit: "编辑", view: "查看", settings: "设置", new: "新建", open: "打开...", save: "保存", save_as: "另存为...", print: "打印...", exit: "退出", undo: "撤销", redo: "重做", cut: "剪切", copy: "复制", paste: "粘贴", delete: "删除", find: "查找...", replace: "替换...", select_all: "全选", time_date: "时间/日期", zoom: "缩放", zoom_in: "放大", zoom_out: "缩小", zoom_restore: "恢复默认缩放", word_wrap: "自动换行", font_size: "字体大小...", install: "安装应用...", lang: "语言 (Language)...", about: "关于", dlg_find: "查找", dlg_find_what: "查找内容:", dlg_match_case: "区分大小写", dlg_dir: "方向", dlg_up: "向上", dlg_down: "向下", dlg_find_next: "查找下一个", dlg_cancel: "取消", dlg_replace: "替换", dlg_replace_with: "替换为:", dlg_replace_btn: "替换", dlg_replace_all: "全部替换", about_title: "关于", about_desc: "基于浏览器的带标签记事本应用。", btn_ok: "确定", lang_title: "语言 (Language)", install_title: "安装应用", install_desc: "安装此应用程序可为您提供以下功能：", install_later: "以后", install_btn: "安装" } },
+      es: { name: "Español (Spanish)", texts: { ...defaultEn, file: "Archivo", edit: "Editar", view: "Ver", settings: "Configuración", new: "Nuevo", open: "Abrir...", save: "Guardar", save_as: "Guardar como..." } },
+      hi: { name: "हिन्दी (Hindi)", texts: { ...defaultEn, file: "फ़ाइल", edit: "संपादन", view: "देखें", settings: "सेटिंग्स", new: "नया", open: "खोलें...", save: "सहेजें", save_as: "इस रूप में सहेजें..." } },
+      fr: { name: "Français (French)", texts: { ...defaultEn, file: "Fichier", edit: "Édition", view: "Affichage", settings: "Paramètres", new: "Nouveau", open: "Ouvrir...", save: "Enregistrer", save_as: "Enregistrer sous..." } },
+      ar: { name: "العربية (Arabic)", texts: { ...defaultEn, file: "ملف", edit: "تحرير", view: "عرض", settings: "إعدادات", new: "جديد", open: "فتح...", save: "حفظ", save_as: "حفظ باسم..." } },
+      bn: { name: "বাংলা (Bengali)", texts: { ...defaultEn, file: "ফাইল", edit: "সম্পাদনা", view: "প্রদর্শন", settings: "সেটিংস", new: "নতুন", open: "খুলুন...", save: "সংরক্ষণ করুন" } },
+      ru: { name: "Русский (Russian)", texts: { ...defaultEn, file: "Файл", edit: "Правка", view: "Вид", settings: "Настройки", new: "Новый", open: "Открыть...", save: "Сохранить", save_as: "Сохранить как..." } },
+      pt: { name: "Português (Portuguese)", texts: { ...defaultEn, file: "Arquivo", edit: "Editar", view: "Exibir", settings: "Configurações", new: "Novo", open: "Abrir...", save: "Salvar", save_as: "Salvar como..." } },
+      ur: { name: "اردو (Urdu)", texts: { ...defaultEn, file: "فائل", edit: "ترمیم", view: "دیکھیں", settings: "ترتیبات", new: "نیا", open: "کھولیں...", save: "محفوظ کریں" } },
+      id: { name: "Bahasa Indonesia", texts: { ...defaultEn, file: "Berkas", edit: "Edit", view: "Tampilan", settings: "Pengaturan", new: "Baru", open: "Buka...", save: "Simpan", save_as: "Simpan sebagai..." } },
+      de: { name: "Deutsch (German)", texts: { ...defaultEn, file: "Datei", edit: "Bearbeiten", view: "Ansicht", settings: "Einstellungen", new: "Neu", open: "Öffnen...", save: "Speichern", save_as: "Speichern unter..." } },
+      mr: { name: "मराठी (Marathi)", texts: { ...defaultEn, file: "फाइल" } },
+      te: { name: "తెలుగు (Telugu)", texts: { ...defaultEn, file: "ఫైల్" } },
+      tr: { name: "Türkçe (Turkish)", texts: { ...defaultEn, file: "Dosya", edit: "Düzenle", view: "Görünüm", settings: "Ayarlar", new: "Yeni", open: "Aç...", save: "Kaydet" } },
+      ta: { name: "தமிழ் (Tamil)", texts: { ...defaultEn, file: "கோப்பு" } },
+      vi: { name: "Tiếng Việt (Vietnamese)", texts: { ...defaultEn, file: "Tệp", edit: "Chỉnh sửa", view: "Xem", settings: "Cài đặt", new: "Mới", open: "Mở...", save: "Lưu" } },
+      tl: { name: "Tagalog", texts: { ...defaultEn, file: "File" } },
+      ko: { name: "한국어 (Korean)", texts: { ...defaultEn, file: "파일", edit: "편집", view: "보기", settings: "설정", new: "새로 만들기", open: "열기...", save: "저장", save_as: "다른 이름으로 저장..." } },
+      fa: { name: "فارسی (Persian)", texts: { ...defaultEn, file: "فایل" } },
+      ha: { name: "Hausa", texts: { ...defaultEn, file: "Fayil" } },
+      sw: { name: "Kiswahili (Swahili)", texts: { ...defaultEn, file: "Faili" } },
+      it: { name: "Italiano (Italian)", texts: { ...defaultEn, file: "File", edit: "Modifica", view: "Visualizza", settings: "Impostazioni", new: "Nuovo", open: "Apri...", save: "Salva", save_as: "Salva con nome..." } },
+      th: { name: "ไทย (Thai)", texts: { ...defaultEn, file: "ไฟล์" } }
+    };
+
+    let currentLang = localStorage.getItem('notepad_lang') || 'ja';
+    if (!translations[currentLang]) currentLang = 'en';
+
+    function updateI18n() {
+      const texts = translations[currentLang].texts;
+      const fallback = translations['en'].texts;
+      
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.innerText = texts[key] || fallback[key] || key;
+      });
+      
+      const wrapText = texts['word_wrap'] || fallback['word_wrap'];
+      document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + wrapText;
+      
+      const tab = getActiveTab();
+      if (tab) {
+         const saveText = texts['save'] || fallback['save'];
+         document.getElementById('menu-save-text').innerText = tab.isDirty ? saveText + "*" : saveText;
+      }
+    }
+
+    function openLangModal() {
+      closeMenus();
+      const select = document.getElementById('langSelect');
+      select.innerHTML = '';
+      for (const [code, data] of Object.entries(translations)) {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.text = data.name;
+        if (code === currentLang) opt.selected = true;
+        select.appendChild(opt);
+      }
+      document.getElementById('langModal').style.display = 'flex';
+    }
+
+    function applyLanguage() {
+      currentLang = document.getElementById('langSelect').value;
+      localStorage.setItem('notepad_lang', currentLang);
+      updateI18n();
+      closeModals();
+    }
+
+    // ==========================================
+
     let deferredPrompt;
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -301,7 +390,7 @@
 
     function updateCursorStatus() {
       const pos = editor.getCursorPosition();
-      document.getElementById('pos-info').innerText = `行 ${pos.row + 1}、列 ${pos.column + 1}`;
+      document.getElementById('pos-info').innerText = `Line ${pos.row + 1}, Col ${pos.column + 1}`;
     }
     editor.on('changeSelection', updateCursorStatus);
 
@@ -332,10 +421,10 @@
     document.getElementById('winReplaceFindInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceFind(); if (e.key === 'Escape') closeAllWinDialogs(); });
     document.getElementById('winReplaceWithInput').addEventListener('keydown', e => { if (e.key === 'Enter') execWinReplaceOne(); if (e.key === 'Escape') closeAllWinDialogs(); });
 
-    function execWinFind() { const needle = document.getElementById('winFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winFindMatchCase').checked; const backwards = document.querySelector('input[name="winFindDir"]:checked').value === 'up'; const found = editor.find(needle, { backwards: backwards, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" が見つかりません。`); }
-    function execWinReplaceFind() { const needle = document.getElementById('winReplaceFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; const found = editor.find(needle, { backwards: false, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" が見つかりません。`); }
+    function execWinFind() { const needle = document.getElementById('winFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winFindMatchCase').checked; const backwards = document.querySelector('input[name="winFindDir"]:checked').value === 'up'; const found = editor.find(needle, { backwards: backwards, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" not found.`); }
+    function execWinReplaceFind() { const needle = document.getElementById('winReplaceFindInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; const found = editor.find(needle, { backwards: false, wrap: true, caseSensitive: caseSensitive, wholeWord: false, regExp: false }); if (!found) alert(`"${needle}" not found.`); }
     function execWinReplaceOne() { const needle = document.getElementById('winReplaceFindInput').value; const replacement = document.getElementById('winReplaceWithInput').value; if (!needle) return; if (editor.getSelectedText() === needle) { editor.insert(replacement); } execWinReplaceFind(); }
-    function execWinReplaceAll() { const needle = document.getElementById('winReplaceFindInput').value; const replacement = document.getElementById('winReplaceWithInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; editor.moveCursorTo(0, 0); let count = 0; while (editor.find(needle, { backwards: false, wrap: false, caseSensitive: caseSensitive, wholeWord: false, regExp: false })) { editor.insert(replacement); count++; } alert(`${count} 個の項目を置換しました。`); }
+    function execWinReplaceAll() { const needle = document.getElementById('winReplaceFindInput').value; const replacement = document.getElementById('winReplaceWithInput').value; if (!needle) return; const caseSensitive = document.getElementById('winReplaceMatchCase').checked; editor.moveCursorTo(0, 0); let count = 0; while (editor.find(needle, { backwards: false, wrap: false, caseSensitive: caseSensitive, wholeWord: false, regExp: false })) { editor.insert(replacement); count++; } }
 
     let dragObj = null; let offsetX = 0; let offsetY = 0;
     function startDragDialog(e, id) { dragObj = document.getElementById(id); const rect = dragObj.getBoundingClientRect(); dragObj.style.margin = '0'; dragObj.style.transform = 'none'; dragObj.style.left = rect.left + 'px'; dragObj.style.top = rect.top + 'px'; offsetX = e.clientX - rect.left; offsetY = e.clientY - rect.top; document.addEventListener('mousemove', dragDialog); document.addEventListener('mouseup', stopDragDialog); }
@@ -352,11 +441,9 @@
 
     const bc = new BroadcastChannel('notepad-tabs-channel');
     bc.onmessage = (event) => {
-      console.log('[DEBUG] BC Message received:', event.data);
       if (event.data.type === 'tabs-adopted') {
         const tid = event.data.transferId;
         if (activeTransfers.has(tid)) {
-          console.log('[DEBUG] Remote adoption confirmed. Removing tabs locally.');
           const tidsToRemove = activeTransfers.get(tid);
           tidsToRemove.forEach(id => closeTab(id, null, true));
           activeTransfers.delete(tid);
@@ -367,7 +454,6 @@
     let tabs = []; let activeTabId = null; let tabIdCounter = 0; let selectedTabs = new Set();
 
     function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null, rawBytes = null, skipSelect = false) {
-      console.log('[DEBUG] createTab called:', filename, 'skipSelect:', skipSelect);
       const id = 'tab_' + (++tabIdCounter);
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
       session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
@@ -380,14 +466,12 @@
     }
 
     function switchTab(id) {
-      console.log('[DEBUG] switchTab called:', id);
       closeAllWinDialogs(); activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
     }
 
     function closeTab(id, event, force = false) {
-      console.log('[DEBUG] closeTab called:', id, 'force:', force);
       closeAllWinDialogs(); if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
@@ -396,10 +480,7 @@
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        console.log('[DEBUG] All tabs closed. Closing window safely.');
-        // ★ タブが0になったらウィンドウを正しく閉じる ★
-        window.close(); 
-        setTimeout(() => { if (tabs.length === 0) createTab(undefined, undefined, undefined, null, null, true); }, 200); 
+        createTab(); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -418,7 +499,6 @@
         
         tabEl.draggable = true;
         tabEl.ondragstart = async (e) => {
-          console.log('[DEBUG] dragstart on tab:', tab.id);
           isDragging = true; 
           
           if (!selectedTabs.has(tab.id)) { selectedTabs.clear(); selectedTabs.add(tab.id); switchTab(tab.id); }
@@ -484,8 +564,6 @@
         tabEl.ondrop = (e) => handleTabDrop(e, tabEl, tab.id);
         
         tabEl.ondragend = (e) => {
-          console.log('[DEBUG] dragend on tab:', tab.id);
-          
           if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
           document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
@@ -493,27 +571,24 @@
           currentDragTid = null;
 
           if (tid) {
-             console.log('[DEBUG] Checking synchronous adoption flag for tid:', tid);
              setTimeout(() => {
                  const isAdopted = localStorage.getItem('sync_adopted_' + tid) === 'true';
-                 console.log('[DEBUG] After wait. isAdopted:', isAdopted, 'tid:', tid);
-                 
                  if (!isAdopted && activeTransfers.has(tid)) {
-                     console.log('[DEBUG] Not adopted anywhere. Opening new window...');
-                     // ★ width, height, noopener を付与してChromeOS環境でも確実に「アプリの別ウィンドウ」として開く ★
-                     window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600,noopener,noreferrer');
-                 } else {
-                     console.log('[DEBUG] Adopted locally or remotely. Skipping new window.');
+                     // ★ ドロップしたマウス位置を中心にウィンドウを開く ★
+                     let left = e.screenX - 100;
+                     let top = e.screenY - 20;
+                     if (left < 0) left = 0;
+                     if (top < 0) top = 0;
+                     window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
                  }
                  localStorage.removeItem('sync_adopted_' + tid);
-             }, 300);
+             }, 150); // 最短待機で誤動作ゼロへ
           }
           
           setTimeout(() => { isDragging = false; }, 100); 
         };
         
         tabEl.onmousedown = (e) => {
-          console.log('[DEBUG] mousedown on tab:', tab.id, 'shiftKey:', e.shiftKey);
           if (e.shiftKey) { 
               if (selectedTabs.has(tab.id)) { 
                   selectedTabs.delete(tab.id); 
@@ -539,7 +614,7 @@
         const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
-      console.log('[DEBUG] renderTabs completed. selectedTabs:', Array.from(selectedTabs));
+      updateI18n(); // 言語切り替えの反映
     }
 
     const tabBar = document.getElementById('tab-bar');
@@ -560,11 +635,9 @@
     };
 
     document.addEventListener('mousedown', e => {
-      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
       
       if (!isDragging && !e.target.closest('.tab') && !e.target.closest('.win-dialog') && !e.target.closest('.menu-container') && selectedTabs.size > 1) {
-          console.log('[DEBUG] Clearing multiple selection due to outside click.');
           selectedTabs.clear();
           if (activeTabId) selectedTabs.add(activeTabId);
           renderTabs();
@@ -572,19 +645,16 @@
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
-      console.log('[DEBUG] handleTabDrop. targetTabId:', targetTabId);
       e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
       
-      console.log('[DEBUG] Dropped transferId:', transferId);
-      
       if (transferId) {
+        // 同期的に受け取りフラグを立てる
         localStorage.setItem('sync_adopted_' + transferId, 'true');
         
         if (activeTransfers.has(transferId)) {
-          console.log('[DEBUG] Reordering tabs within the same window.');
           let toIndex = tabs.length;
           let isLeft = true;
           if (targetEl && targetTabId) { 
@@ -610,12 +680,10 @@
           
           setTimeout(() => { renderTabs(); }, 10);
         } else {
-          console.log('[DEBUG] Receiving tabs from another window.');
           bc.postMessage({ type: 'tabs-adopted', transferId });
           
           let payload = await getTransferData(transferId);
           if (!payload) {
-             console.log('[DEBUG] DB read empty, waiting 150ms for save to complete...');
              await new Promise(r => setTimeout(r, 150));
              payload = await getTransferData(transferId);
           }
@@ -639,7 +707,6 @@
           }
         }
       } else {
-        console.log('[DEBUG] File drop detected.');
         const items = e.dataTransfer.items; if (!items) return;
         for (let i = 0; i < items.length; i++) {
           if (items[i].kind === 'file') {
@@ -651,11 +718,10 @@
     }
 
     // ==========================================
-    // データベース管理 (IndexedDBオンリー)
+    // データベース管理 (IndexedDBオンリーで大容量保護)
     // ==========================================
     let db = null;
     function initDB() {
-      console.log('[DEBUG] Initializing DB...');
       return new Promise((resolve) => {
         const request = indexedDB.open('NotepadDB', 2);
         request.onupgradeneeded = (e) => {
@@ -663,35 +729,31 @@
           if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings');
           if (!database.objectStoreNames.contains('transfers')) database.createObjectStore('transfers');
         };
-        request.onsuccess = (e) => { db = e.target.result; console.log('[DEBUG] DB Initialized.'); resolve(); }; 
-        request.onerror = () => { console.error('[DEBUG] DB Initialization Failed.'); resolve(); };
+        request.onsuccess = (e) => { db = e.target.result; resolve(); }; 
+        request.onerror = () => { resolve(); };
       });
     }
 
     function saveTransferData(id, data) { 
-      console.log('[DEBUG] Saving transfer data to IndexedDB. ID:', id);
       return new Promise((resolve) => { 
-        if (!db) { console.error('[DEBUG] DB not available.'); return resolve(); }
+        if (!db) return resolve();
         const tx = db.transaction('transfers', 'readwrite'); 
         tx.objectStore('transfers').put(data, id); 
-        tx.oncomplete = () => { console.log('[DEBUG] IndexedDB save complete.'); resolve(); };
-        tx.onerror = (e) => { console.error('[DEBUG] IndexedDB save error:', e); resolve(); };
+        tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
       }); 
     }
 
     function getTransferData(id) { 
-      console.log('[DEBUG] Getting transfer data from IndexedDB. ID:', id);
       return new Promise(resolve => { 
         if (!db) return resolve(null);
         const tx = db.transaction('transfers', 'readonly'); 
         const req = tx.objectStore('transfers').get(id); 
-        req.onsuccess = () => { console.log('[DEBUG] IndexedDB get success.'); resolve(req.result); }; 
-        req.onerror = (e) => { console.error('[DEBUG] IndexedDB get error:', e); resolve(null); }; 
+        req.onsuccess = () => resolve(req.result); 
+        req.onerror = () => resolve(null); 
       }); 
     }
 
     function deleteTransferData(id) { 
-      console.log('[DEBUG] Deleting transfer data. ID:', id);
       return new Promise(resolve => { 
         if (!db) return resolve();
         const tx = db.transaction('transfers', 'readwrite'); 
@@ -744,7 +806,9 @@
       document.getElementById('menu-cut').classList.toggle('disabled', !hasSelection);
       document.getElementById('menu-copy').classList.toggle('disabled', !hasSelection);
       document.getElementById('menu-delete').classList.toggle('disabled', !hasSelection);
-      document.getElementById('menu-save-text').innerText = tab.isDirty ? "上書き保存(S)" : "保存(S)";
+      
+      const texts = translations[currentLang].texts;
+      document.getElementById('menu-save-text').innerText = tab.isDirty ? (texts['save'] || 'Save') + "*" : (texts['save'] || 'Save');
     }
 
     var isAnyMenuOpen = false;
@@ -765,7 +829,8 @@
       else if (action === 'save') { if(tab) await executeSave(tab); }
       else if (action === 'saveAs') { if(tab) await executeSaveAs(tab); }
       else if (action === 'font') {
-        let size = prompt("フォントサイズを数値(px)で入力してください:", currentFontSize);
+        const texts = translations[currentLang].texts;
+        let size = prompt((texts['font_size'] || 'Font Size:'), currentFontSize);
         if (size && !isNaN(size)) { currentFontSize = parseInt(size); editor.setFontSize(currentFontSize); document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%"; }
       }
     }
@@ -804,7 +869,7 @@
     async function executeSave(tab) {
       const text = tab.session.getValue(); const unicodeArray = Encoding.stringToCode(text); const outArray = Encoding.convert(unicodeArray, { to: tab.encoding, from: 'UNICODE' }); const uint8Array = new Uint8Array(outArray);
       tab.rawBytes = uint8Array; 
-      if (tab.fileHandle) { try { const writable = await tab.fileHandle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); return; } catch (err) { console.log("上書き保存エラー:", err); tab.fileHandle = null; } }
+      if (tab.fileHandle) { try { const writable = await tab.fileHandle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); return; } catch (err) { tab.fileHandle = null; } }
       await saveWithPicker(uint8Array, tab);
     }
 
@@ -814,7 +879,7 @@
       if (window.showSaveFilePicker) {
         try { const handle = await window.showSaveFilePicker({ suggestedName: tab.filename }); tab.fileHandle = handle; tab.filename = handle.name; tab.rawBytes = uint8Array; const writable = await handle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); await addRecentFile(tab.filename, handle); } catch (err) {}
       } else {
-        let name = prompt("保存するファイル名を入力してください", tab.filename); if (!name) return; tab.filename = name; tab.rawBytes = uint8Array; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename);
+        let name = prompt("ファイル名 / File name:", tab.filename); if (!name) return; tab.filename = name; tab.rawBytes = uint8Array; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename);
       }
     }
 
@@ -835,14 +900,23 @@
 
     function printContent() { closeAllWinDialogs(); closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
     function insertTimeDate() { const now = new Date(); const str = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString().replace(/\//g, '/'); editor.insert(str); closeMenus(); }
-    function toggleWordWrap() { isWordWrap = !isWordWrap; editor.setOptions({ wrap: isWordWrap }); document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + "右端で折り返す(W)"; closeMenus(); }
+    
+    function toggleWordWrap() { 
+      isWordWrap = !isWordWrap; 
+      editor.setOptions({ wrap: isWordWrap }); 
+      const texts = translations[currentLang].texts;
+      const wrapText = texts['word_wrap'] || translations['en'].texts['word_wrap'];
+      document.getElementById('menu-wrap-check').innerHTML = (isWordWrap ? "✔ " : "") + wrapText; 
+      closeMenus(); 
+    }
+    
     function changeZoom(dir) { if (dir === 0) currentFontSize = defaultFontSize; else currentFontSize += (dir * 2); if(currentFontSize < 6) currentFontSize = 6; editor.setFontSize(currentFontSize); document.getElementById('zoom-info').innerText = Math.round((currentFontSize / defaultFontSize) * 100) + "%"; closeMenus(); }
 
     async function execCmd(cmd) {
       closeMenus();
       if(cmd === 'copy') { const text = editor.getSelectedText(); if(text) await navigator.clipboard.writeText(text); }
       else if (cmd === 'cut') { const text = editor.getSelectedText(); if(text) { await navigator.clipboard.writeText(text); editor.insert(""); } }
-      else if (cmd === 'paste') { try { const text = await navigator.clipboard.readText(); editor.insert(text); } catch(e) { alert("ブラウザの仕様により貼り付けられません。Ctrl+Vを使用してください。"); } }
+      else if (cmd === 'paste') { try { const text = await navigator.clipboard.readText(); editor.insert(text); } catch(e) { } }
     }
 
     function updateMode(filename) {
@@ -851,12 +925,17 @@
       tab.session.setMode(mode); document.getElementById('mode-info').innerText = mode.split('/').pop().toUpperCase();
     }
 
-    function updateTitleAndStatus() { const tab = getActiveTab(); if (!tab) return; const prefix = tab.isDirty ? "*" : ""; document.title = prefix + tab.filename + " - メモ帳"; document.getElementById('enc-info').innerText = tab.encoding; }
+    function updateTitleAndStatus() { 
+        const tab = getActiveTab(); if (!tab) return; 
+        const prefix = tab.isDirty ? "*" : ""; 
+        const titleText = (translations[currentLang].texts['about_title'] || "Notepad").replace("バージョン情報", "メモ帳").replace("About", "Notepad");
+        document.title = prefix + tab.filename + " - " + titleText; 
+        document.getElementById('enc-info').innerText = tab.encoding; 
+    }
 
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
-        console.log('[DEBUG] launchQueue triggered.');
         if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
@@ -866,19 +945,16 @@
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
       
-      console.log('[DEBUG] Initializing window. urlTransferId:', urlTransferId);
+      updateI18n(); // 初回言語適用
       
       if (urlTransferId) {
         let payload = await getTransferData(urlTransferId);
         if (!payload) {
-            console.log('[DEBUG] DB read empty, waiting 150ms for save to complete...');
             await new Promise(r => setTimeout(r, 150));
             payload = await getTransferData(urlTransferId);
         }
         
         if (payload && Array.isArray(payload)) {
-          console.log('[DEBUG] Successfully retrieved payload. Sending adopted signal.');
-          
           localStorage.setItem('sync_adopted_' + urlTransferId, 'true');
           bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
           await deleteTransferData(urlTransferId);
@@ -894,7 +970,6 @@
           if (tabs.length > 0) switchTab(tabs[0].id);
           window.history.replaceState({}, document.title, window.location.pathname);
         } else { 
-          console.log('[DEBUG] Failed to retrieve payload. Opening a new blank tab.');
           createTab(); 
         }
       } else { createTab(); }
