@@ -20,7 +20,7 @@
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
     
-    .tab { position: relative; display: flex; align-items: center; justify-content: space-between; min-width: 100px; max-width: 250px; padding: 6px 10px 7px 10px; margin-right: 2px; background: #f3f3f3; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default; transition: background 0.2s; white-space: nowrap; overflow: hidden; -webkit-app-region: no-drag; }
+    .tab { position: relative; display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 50px; max-width: 200px; padding: 6px 10px 7px 10px; margin-right: 2px; background: #f3f3f3; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default; transition: background 0.2s, max-width 0.2s; white-space: nowrap; overflow: hidden; -webkit-app-region: no-drag; }
     .tab:hover { background: #e0e0e0; }
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
@@ -29,11 +29,32 @@
     .tab.drag-over-left::before { content: ""; position: absolute; left: -3px; top: 15%; bottom: 15%; width: 4px; background: #0078d7; border-radius: 4px; box-shadow: 0 0 6px rgba(0,120,215,0.6); z-index: 10; pointer-events: none; }
     .tab.drag-over-right::after { content: ""; position: absolute; right: -3px; top: 15%; bottom: 15%; width: 4px; background: #0078d7; border-radius: 4px; box-shadow: 0 0 6px rgba(0,120,215,0.6); z-index: 10; pointer-events: none; }
 
-    .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-    .tab-close { margin-left: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
+    .tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+    .tab-close { margin-left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; flex-shrink: 0; }
     .tab-close:hover { background: #ccc; color: #000; }
     .add-tab-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; font-size: 18px; color: #555; -webkit-app-region: no-drag; }
     .add-tab-btn:hover { background: #d0d0d0; }
+
+    /* Drag-active style to temporarily disable window dragging during tab reordering / drops */
+    body.drag-active .tab-bar, 
+    body.drag-active .tab, 
+    body.drag-active .add-tab-btn,
+    body.drag-active .tab-bar-title {
+      -webkit-app-region: no-drag !important;
+    }
+
+    .tab-bar-title {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px 7px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #333;
+      user-select: none;
+      -webkit-app-region: drag;
+      white-space: nowrap;
+    }
 
     .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
     .menu-container { position: relative; }
@@ -205,6 +226,10 @@
   </div>
 
   <div class="tab-bar" id="tab-bar">
+    <div class="tab-bar-title" id="tab-bar-title">
+      <img src="favicon16.png" width="16" height="16" alt="Icon" style="-webkit-app-region: drag; pointer-events: none;">
+      <span id="tab-bar-title-text" style="-webkit-app-region: drag; pointer-events: none;">メモ帳</span>
+    </div>
     <div class="add-tab-btn" onclick="menuAction('new')" title="New Tab">+</div>
   </div>
 
@@ -342,6 +367,7 @@
          const saveText = texts['save'] || fallback['save'];
          document.getElementById('menu-save-text').innerText = tab.isDirty ? saveText + "*" : saveText;
       }
+      updateWCOVisibility();
     }
 
     function openLangModal() {
@@ -523,6 +549,7 @@
             tab.isDirty = !session.getUndoManager().isClean();
             renderTabs();
             if (id === activeTabId) updateTitleAndStatus();
+            queueSaveWorkspace(); // Auto-save state
           }
         }, 0);
       });
@@ -536,6 +563,7 @@
       if (!skipSelect) {
           selectedTabs.clear(); selectedTabs.add(id); switchTab(id); updateMode(filename);
       }
+      queueSaveWorkspace(); // Auto-save state
       return id;
     }
 
@@ -543,6 +571,7 @@
       closeAllWinDialogs(); activeTabId = id; const tab = getActiveTab(); if (!tab) return;
       editor.setSession(tab.session); editor.setOptions({ wrap: isWordWrap }); editor.setFontSize(currentFontSize);
       updateMode(tab.filename); renderTabs(); updateTitleAndStatus(); updateCursorStatus(); editor.focus();
+      queueSaveWorkspace(); // Auto-save state
     }
 
     function closeTab(id, event, force = false) {
@@ -552,6 +581,7 @@
       if (!force && tab.isDirty) { if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) return; }
       
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
+      queueSaveWorkspace(); // Auto-save state
 
       if (tabs.length === 0) { 
         // ★ タブが0になったらウィンドウを正しく閉じる（戻す） ★
@@ -567,7 +597,7 @@
 
     function renderTabs() {
       const tabBar = document.getElementById('tab-bar');
-      Array.from(tabBar.children).forEach(child => { if (!child.classList.contains('add-tab-btn')) child.remove(); });
+      Array.from(tabBar.children).forEach(child => { if (!child.classList.contains('add-tab-btn') && !child.classList.contains('tab-bar-title')) child.remove(); });
       
       tabs.forEach(tab => {
         const tabEl = document.createElement('div'); tabEl.className = 'tab';
@@ -945,7 +975,7 @@
     async function executeSave(tab) {
       const text = tab.session.getValue(); const unicodeArray = Encoding.stringToCode(text); const outArray = Encoding.convert(unicodeArray, { to: tab.encoding, from: 'UNICODE' }); const uint8Array = new Uint8Array(outArray);
       tab.rawBytes = uint8Array; 
-      if (tab.fileHandle) { try { const writable = await tab.fileHandle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); return; } catch (err) { tab.fileHandle = null; } }
+      if (tab.fileHandle) { try { const writable = await tab.fileHandle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); queueSaveWorkspace(); return; } catch (err) { tab.fileHandle = null; } }
       await saveWithPicker(uint8Array, tab);
     }
 
@@ -953,9 +983,9 @@
 
     async function saveWithPicker(uint8Array, tab) {
       if (window.showSaveFilePicker) {
-        try { const handle = await window.showSaveFilePicker({ suggestedName: tab.filename }); tab.fileHandle = handle; tab.filename = handle.name; tab.rawBytes = uint8Array; const writable = await handle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); await addRecentFile(tab.filename, handle); } catch (err) {}
+        try { const handle = await window.showSaveFilePicker({ suggestedName: tab.filename }); tab.fileHandle = handle; tab.filename = handle.name; tab.rawBytes = uint8Array; const writable = await handle.createWritable(); await writable.write(uint8Array); await writable.close(); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); await addRecentFile(tab.filename, handle); queueSaveWorkspace(); } catch (err) {}
       } else {
-        let name = prompt("ファイル名 / File name:", tab.filename); if (!name) return; tab.filename = name; tab.rawBytes = uint8Array; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename);
+        let name = prompt("ファイル名 / File name:", tab.filename); if (!name) return; tab.filename = name; tab.rawBytes = uint8Array; const blob = new Blob([uint8Array], { type: 'application/octet-stream' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = tab.filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); tab.session.getUndoManager().markClean(); tab.isDirty = false; renderTabs(); updateTitleAndStatus(); updateMode(tab.filename); queueSaveWorkspace();
       }
     }
 
@@ -972,6 +1002,7 @@
           tab.isDirty = false; 
       }
       renderTabs(); updateTitleAndStatus();
+      queueSaveWorkspace();
     }
 
     function printContent() { closeAllWinDialogs(); closeMenus(); const tab = getActiveTab(); if (!tab) return; let printDiv = document.getElementById('print-area'); if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'print-area'; document.body.appendChild(printDiv); } printDiv.style.whiteSpace = isWordWrap ? "pre-wrap" : "pre"; printDiv.innerText = tab.session.getValue(); window.print(); }
@@ -1004,10 +1035,182 @@
     function updateTitleAndStatus() { 
         const tab = getActiveTab(); if (!tab) return; 
         const prefix = tab.isDirty ? "*" : ""; 
-        const titleText = (translations[currentLang].texts['about_title'] || "Notepad").replace("バージョン情報", "メモ帳").replace("About", "Notepad");
-        document.title = prefix + tab.filename + " - " + titleText; 
+        const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
+        document.title = prefix + appName + " - " + tab.filename; 
         document.getElementById('enc-info').innerText = tab.encoding; 
     }
+
+    // ==========================================
+    // オートセーブ、復元および各種グローバルイベント
+    // ==========================================
+    function jsonParseSafe(str) {
+      try { return JSON.parse(str); } catch (e) { return null; }
+    }
+
+    function saveWorkspace() {
+      return new Promise((resolve) => {
+        if (!db) return resolve();
+        const state = {
+          activeTabId: activeTabId,
+          selectedTabIds: Array.from(selectedTabs),
+          tabs: tabs.map(t => ({
+            id: t.id,
+            filename: t.filename,
+            content: t.session.getValue(),
+            encoding: t.encoding,
+            isDirty: t.isDirty,
+            fileHandle: t.fileHandle,
+            rawBytes: t.rawBytes
+          }))
+        };
+        const tx = db.transaction('settings', 'readwrite');
+        tx.objectStore('settings').put(state, 'workspaceState');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+
+    let saveWorkspaceTimeout = null;
+    function queueSaveWorkspace() {
+      if (saveWorkspaceTimeout) clearTimeout(saveWorkspaceTimeout);
+      saveWorkspaceTimeout = setTimeout(() => {
+        saveWorkspace();
+      }, 500);
+    }
+
+    async function restoreWorkspace() {
+      if (!db) return false;
+      const tx = db.transaction('settings', 'readonly');
+      const req = tx.objectStore('settings').get('workspaceState');
+      const idbState = await new Promise((resolve) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+
+      let localState = null;
+      try {
+        const str = localStorage.getItem('notepad_backup_state');
+        if (str) localState = jsonParseSafe(str);
+      } catch (e) {}
+
+      let state = localState || idbState;
+      if (!state || !Array.isArray(state.tabs) || state.tabs.length === 0) {
+        return false;
+      }
+
+      tabs = [];
+      selectedTabs.clear();
+
+      state.tabs.forEach(data => {
+        let fileHandle = null;
+        let rawBytes = null;
+        if (idbState && Array.isArray(idbState.tabs)) {
+          const matched = idbState.tabs.find(x => x.id === data.id || x.filename === data.filename);
+          if (matched) {
+            fileHandle = matched.fileHandle;
+            rawBytes = matched.rawBytes;
+          }
+        }
+        const id = createTab(data.filename, data.content, data.encoding, fileHandle, rawBytes, true);
+        const t = tabs.find(x => x.id === id);
+        if (t) {
+          t.isDirty = data.isDirty;
+          t.isDirtyAtRestoration = data.isDirty;
+        }
+      });
+
+      if (Array.isArray(state.selectedTabIds)) {
+        state.selectedTabIds.forEach(id => {
+          if (tabs.some(t => t.id === id)) selectedTabs.add(id);
+        });
+      }
+
+      let activeId = state.activeTabId;
+      if (!tabs.some(t => t.id === activeId)) {
+        activeId = tabs[0].id;
+      }
+      if (selectedTabs.size === 0) {
+        selectedTabs.add(activeId);
+      }
+
+      renderTabs();
+      switchTab(activeId);
+      return true;
+    }
+
+    function updateWCOVisibility() {
+      const titleEl = document.getElementById('tab-bar-title');
+      if (!titleEl) return;
+      const isWCO = navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible;
+      if (isWCO) {
+        titleEl.style.display = 'flex';
+        const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
+        document.getElementById('tab-bar-title-text').innerText = appName;
+      } else {
+        titleEl.style.display = 'none';
+      }
+    }
+
+    if (navigator.windowControlsOverlay) {
+      navigator.windowControlsOverlay.addEventListener('geometrychange', updateWCOVisibility);
+    }
+
+    // Ctrl+Tab, Ctrl+Shift+Tab によるタブ切り替え (Capturing Phase)
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (tabs.length <= 1) return;
+        
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+        if (currentIndex === -1) return;
+        
+        let nextIndex;
+        if (e.shiftKey) {
+          nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        } else {
+          nextIndex = (currentIndex + 1) % tabs.length;
+        }
+        
+        selectedTabs.clear();
+        selectedTabs.add(tabs[nextIndex].id);
+        switchTab(tabs[nextIndex].id);
+      }
+    }, true);
+
+    // ドラッグ＆ドロップ判定向上のため、ドラッグ中は一時的に-webkit-app-region: dragを無効化する
+    window.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.length > 0) {
+        document.body.classList.add('drag-active');
+      }
+    });
+    const removeDragActive = () => {
+      document.body.classList.remove('drag-active');
+    };
+    window.addEventListener('dragend', removeDragActive);
+    window.addEventListener('drop', removeDragActive);
+    document.addEventListener('dragleave', (e) => {
+      if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+        document.body.classList.remove('drag-active');
+      }
+    });
+
+    // リロード前の状態保存 (localStorage)
+    window.addEventListener('beforeunload', () => {
+      const backupState = {
+        activeTabId: activeTabId,
+        selectedTabIds: Array.from(selectedTabs),
+        tabs: tabs.map(t => ({
+          id: t.id,
+          filename: t.filename,
+          content: t.session.getValue(),
+          encoding: t.encoding,
+          isDirty: t.isDirty
+        })),
+        timestamp: Date.now()
+      };
+      localStorage.setItem('notepad_backup_state', JSON.stringify(backupState));
+    });
 
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
@@ -1022,6 +1225,7 @@
       const urlTransferId = urlParams.get('transfer');
       
       updateI18n(); 
+      updateWCOVisibility();
       
       if (urlTransferId) {
         let payload = await getTransferData(urlTransferId);
@@ -1048,7 +1252,12 @@
         } else { 
           createTab(); 
         }
-      } else { createTab(); }
+      } else {
+        const restored = await restoreWorkspace();
+        if (!restored) {
+          createTab();
+        }
+      }
       updateRecentMenu();
     });
   </script>
