@@ -14,6 +14,7 @@
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
+    /* タブバー */
     .tab-bar { display: flex; background: #e8eaed; padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
@@ -24,9 +25,9 @@
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
     
-    /* ★ ドロップ位置の青い線をタブとタブの間に表示 ★ */
-    .tab.drag-over-left::before { content: ""; position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; pointer-events: none; }
-    .tab.drag-over-right::after { content: ""; position: absolute; right: -2px; top: 0; bottom: 0; width: 3px; background: #0067c0; z-index: 10; pointer-events: none; }
+    /* ★ ドロップ位置の青い線をおしゃれに変更（太さ、角丸、ドロップシャドウ） ★ */
+    .tab.drag-over-left::before { content: ""; position: absolute; left: -3px; top: 15%; bottom: 15%; width: 4px; background: #0078d7; border-radius: 4px; box-shadow: 0 0 6px rgba(0,120,215,0.6); z-index: 10; pointer-events: none; }
+    .tab.drag-over-right::after { content: ""; position: absolute; right: -3px; top: 15%; bottom: 15%; width: 4px; background: #0078d7; border-radius: 4px; box-shadow: 0 0 6px rgba(0,120,215,0.6); z-index: 10; pointer-events: none; }
 
     .tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close { margin-left: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; }
@@ -103,7 +104,7 @@
 </head>
 <body>
 
-  <!-- ★ バージョン情報モーダル ★ -->
+  <!-- バージョン情報モーダル -->
   <div id="aboutModal" class="modal-overlay" onclick="closeModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 data-i18n="about_title">バージョン情報</h3>
@@ -115,6 +116,7 @@
     </div>
   </div>
 
+  <!-- インストールモーダル -->
   <div id="installModal" class="modal-overlay" onclick="closeModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 data-i18n="install_title">アプリのインストール</h3>
@@ -131,7 +133,7 @@
     </div>
   </div>
 
-  <!-- ★ 言語設定モーダル ★ -->
+  <!-- 言語設定モーダル -->
   <div id="langModal" class="modal-overlay" onclick="closeModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 data-i18n="lang_title">言語設定 (Language)</h3>
@@ -458,6 +460,12 @@
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
       session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
       
+      // ★ 多言語対応による「無題」の翻訳 ★
+      if (filename === "無題") {
+          const texts = translations[currentLang].texts;
+          filename = texts['new'] ? texts['new'].replace('(N)', '').trim() : "Untitled";
+      }
+
       tabs.push({ id, filename, fileHandle, encoding, isDirty: false, session, rawBytes });
       if (!skipSelect) {
           selectedTabs.clear(); selectedTabs.add(id); switchTab(id); updateMode(filename);
@@ -480,7 +488,9 @@
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        createTab(); 
+        // ★ タブが0になったらウィンドウを正しく閉じる（戻す） ★
+        window.close(); 
+        setTimeout(() => { if (tabs.length === 0) createTab(undefined, undefined, undefined, null, null, true); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -718,7 +728,7 @@
     }
 
     // ==========================================
-    // データベース管理 (IndexedDBオンリーで大容量保護)
+    // データベース管理 (IndexedDBオンリー)
     // ==========================================
     let db = null;
     function initDB() {
@@ -856,7 +866,7 @@
       const content = Encoding.codeToString(unicodeArray);
       
       const currentTab = getActiveTab();
-      if (currentTab && currentTab.filename === "無題" && !currentTab.isDirty && currentTab.session.getValue() === "") { 
+      if (currentTab && (currentTab.filename === "無題" || currentTab.filename === "Untitled") && !currentTab.isDirty && currentTab.session.getValue() === "") { 
           currentTab.filename = file.name; currentTab.fileHandle = handle; currentTab.encoding = detected; 
           currentTab.rawBytes = bytes;
           currentTab.session.setValue(content); currentTab.session.getUndoManager().markClean(); currentTab.isDirty = false; 
@@ -936,7 +946,7 @@
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
-        if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
+        if (tabs.length === 1 && (tabs[0].filename === "無題" || tabs[0].filename === "Untitled") && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
     }
@@ -945,7 +955,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
       
-      updateI18n(); // 初回言語適用
+      updateI18n(); 
       
       if (urlTransferId) {
         let payload = await getTransferData(urlTransferId);
