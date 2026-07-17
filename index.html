@@ -41,7 +41,29 @@
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
     
-    .tab { position: relative; display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 50px; max-width: 200px; padding: 6px 10px 7px 10px; margin-right: 2px; background: #f3f3f3; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; font-size: var(--ui-font-size); color: #555; cursor: default; transition: background 0.2s, max-width 0.2s; white-space: nowrap; overflow: hidden; -webkit-app-region: no-drag; }
+    .tab {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 1 1 200px; /* Preferred size is 200px, grow to fill space, shrink if tight */
+      min-width: 50px;
+      max-width: 220px; /* Slightly wider for better legibility */
+      padding: 6px 10px 7px 10px;
+      margin-right: 2px;
+      background: #f3f3f3;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      font-size: var(--ui-font-size);
+      color: #555;
+      cursor: default;
+      transition: background 0.2s, max-width 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      -webkit-app-region: no-drag;
+      box-sizing: border-box;
+    }
     .tab:hover { background: #e0e0e0; }
     .tab.selected { background: #e3f2fd; color: #005a9e; }
     .tab.active { background: #fff; color: #000; border-color: #ccc; border-bottom: none; box-shadow: 0 1px 0 0 #fff; z-index: 2; }
@@ -53,7 +75,21 @@
     .tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
     .tab-close { margin-left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; flex-shrink: 0; }
     .tab-close:hover { background: #ccc; color: #000; }
-    .add-tab-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; font-size: 18px; color: #555; -webkit-app-region: no-drag; }
+    .add-tab-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 5px;
+      margin-bottom: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 18px;
+      color: #555;
+      -webkit-app-region: no-drag;
+      flex-shrink: 0; /* Keep square ratio and prevent stretching */
+    }
     .add-tab-btn:hover { background: #d0d0d0; }
 
     /* Drag-active style to temporarily disable window dragging during tab reordering / drops */
@@ -613,18 +649,39 @@
       closeAllWinDialogs(); if (event) event.stopPropagation();
       const tabIndex = tabs.findIndex(t => t.id === id); if (tabIndex === -1) return;
       const tab = tabs[tabIndex];
-      if (!force && tab.isDirty) { if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) return; }
       
-      tabs.splice(tabIndex, 1); selectedTabs.delete(id);
-      queueSaveWorkspace(); // Auto-save state
+      // 選択されていないタブのバツボタンを押した際、まずはそのタブに切り替えてユーザーに見せる
+      if (!force && activeTabId !== id) {
+        switchTab(id);
+      }
+      
+      const proceedClose = () => {
+        const currentIdx = tabs.findIndex(t => t.id === id);
+        if (currentIdx === -1) return;
+        
+        tabs.splice(currentIdx, 1); selectedTabs.delete(id);
+        queueSaveWorkspace(); // Auto-save state
 
-      if (tabs.length === 0) { 
-        // ★ タブが0になったらウィンドウを正しく閉じる（戻す） ★
-        window.close(); 
-        setTimeout(() => { if (tabs.length === 0) createTab(undefined, undefined, undefined, null, null, true); }, 200); 
+        if (tabs.length === 0) { 
+          // ★ タブが0になったらウィンドウを正しく閉じる（戻す） ★
+          window.close(); 
+          setTimeout(() => { if (tabs.length === 0) createTab(undefined, undefined, undefined, null, null, true); }, 200); 
+        } else {
+          if (activeTabId === id) { const nextIndex = Math.max(0, currentIdx - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
+          else { renderTabs(); }
+        }
+      };
+
+      if (!force) {
+        // UI描画を待ってから保存確認ダイアログを出す
+        setTimeout(() => {
+          if (tab.isDirty) { 
+            if (!confirm(`"${tab.filename}" の変更が保存されていません。破棄して閉じますか？`)) return; 
+          }
+          proceedClose();
+        }, 50);
       } else {
-        if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
-        else { renderTabs(); }
+        proceedClose();
       }
     }
 
