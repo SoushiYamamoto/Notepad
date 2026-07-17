@@ -15,7 +15,28 @@
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
     /* タブバー */
-    .tab-bar { display: flex; background: #e8eaed; padding: max(8px, env(titlebar-area-y, 8px)) env(titlebar-area-right, 5px) 0 max(8px, env(titlebar-area-x, 8px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; min-height: 44px; box-sizing: border-box; }
+    .tab-bar {
+      display: flex;
+      background: #e8eaed;
+      padding: 8px 180px 0 8px; /* Default padding for standard mode: right is 180px, left is 8px */
+      box-shadow: inset 0 -1px 0 0 #ccc;
+      align-items: flex-end;
+      overflow-x: auto;
+      overflow-y: hidden;
+      user-select: none;
+      -webkit-app-region: drag;
+      transition: background-color 0.15s, box-shadow 0.15s;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+
+    @media (display-mode: window-controls-overlay) {
+      .tab-bar {
+        padding-top: max(8px, env(titlebar-area-y, 8px));
+        padding-left: max(8px, env(titlebar-area-x, 8px));
+        padding-right: calc(100vw - env(titlebar-area-right, 180px));
+      }
+    }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
@@ -54,6 +75,18 @@
       user-select: none;
       -webkit-app-region: drag;
       white-space: nowrap;
+      text-shadow: none !important;
+    }
+    
+    .tab-bar-title-clickable {
+      -webkit-app-region: no-drag;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-bar-title-clickable:hover {
+      opacity: 0.8;
     }
 
     .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
@@ -227,8 +260,10 @@
 
   <div class="tab-bar" id="tab-bar">
     <div class="tab-bar-title" id="tab-bar-title">
-      <img src="favicon16.png" width="16" height="16" alt="Icon" style="-webkit-app-region: drag; pointer-events: none;">
-      <span id="tab-bar-title-text" style="-webkit-app-region: drag; pointer-events: none;">メモ帳</span>
+      <div class="tab-bar-title-clickable" id="tab-bar-title-clickable" onclick="window.open('https://www.linkedin.com/in/soushi/', '_blank')" title="Soushi Yamamoto - LinkedIn">
+        <img src="favicon32.png" width="18" height="18" alt="Icon">
+        <span id="tab-bar-title-text">メモ帳</span>
+      </div>
     </div>
     <div class="add-tab-btn" onclick="menuAction('new')" title="New Tab">+</div>
   </div>
@@ -717,7 +752,9 @@
         }
         
         const titleEl = document.createElement('div'); titleEl.className = 'tab-title'; titleEl.innerText = (tab.isDirty ? "*" : "") + tab.filename;
-        const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×'; closeEl.onclick = (e) => closeTab(tab.id, e);
+        const closeEl = document.createElement('div'); closeEl.className = 'tab-close'; closeEl.innerText = '×';
+        closeEl.onmousedown = (e) => e.stopPropagation();
+        closeEl.onclick = (e) => { e.stopPropagation(); closeTab(tab.id, e); };
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
       updateI18n(); // 言語切り替えの反映
@@ -1151,14 +1188,9 @@
     function updateWCOVisibility() {
       const titleEl = document.getElementById('tab-bar-title');
       if (!titleEl) return;
-      const isWCO = navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible;
-      if (isWCO) {
-        titleEl.style.display = 'flex';
-        const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
-        document.getElementById('tab-bar-title-text').innerText = appName;
-      } else {
-        titleEl.style.display = 'none';
-      }
+      titleEl.style.display = 'flex'; // ALWAYS show
+      const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
+      document.getElementById('tab-bar-title-text').innerText = appName;
     }
 
     if (navigator.windowControlsOverlay) {
