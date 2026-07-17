@@ -455,15 +455,81 @@
 
     let tabs = []; let activeTabId = null; let tabIdCounter = 0; let selectedTabs = new Set();
 
-    function createTab(filename = "無題", content = "", encoding = "UTF8", fileHandle = null, rawBytes = null, skipSelect = false) {
+    const untitledBases = {
+      ja: "無題",
+      en: "Untitled",
+      zh: "无标题",
+      es: "Sin título",
+      hi: "बिना शीर्षक",
+      fr: "Sans titre",
+      ar: "بلا عنوان",
+      bn: "শিরোনামহীন",
+      ru: "Безымянный",
+      pt: "Sem título",
+      ur: "بغیر عنوان",
+      id: "Tanpa judul",
+      de: "Unbenannt",
+      mr: "अनामिक",
+      te: "శీర్షిక లేనిది",
+      tr: "Adsız",
+      ta: "தலைப்பில்லாதது",
+      vi: "Không có tiêu đề",
+      tl: "Walang pamagat",
+      ko: "제목 없음",
+      fa: "بدون عنوان",
+      ha: "Ba shi da suna",
+      sw: "Isiyo na jina",
+      it: "Senza nome",
+      th: "ไม่มีชื่อ"
+    };
+
+    function generateUntitledFilename() {
+      const base = untitledBases[currentLang] || "Untitled";
+      const ext = ".txt";
+      const defaultName = base + ext;
+      
+      let exists = tabs.some(t => t.filename === defaultName);
+      if (!exists) {
+        return defaultName;
+      }
+      
+      let counter = 1;
+      while (true) {
+        const nameWithCounter = `${base} (${counter})${ext}`;
+        if (!tabs.some(t => t.filename === nameWithCounter)) {
+          return nameWithCounter;
+        }
+        counter++;
+      }
+    }
+
+    function isUntitledTab(tab) {
+      if (!tab) return false;
+      if (tab.fileHandle !== null || tab.isDirty || tab.session.getValue() !== "") return false;
+      const name = tab.filename;
+      const bases = [
+        "無題", "新規", "Untitled", "无标题", "Sin título", "Unbenannt", "Sans titre", "제목 없음", "Sem título", "Безымянный", "Senza nome", "Adsız", "Không có tiêu đề", "ไม่มีชื่อ", "बिना शीर्षक", "بلا عنوان", "শিরোনামহীন", "بغیر عنوان", "Tanpa judul", "अनामिक", "శీర్షిక లేనిది", "Walang pamagat", "بدون عنوان", "Ba shi da suna", "Isiyo na jina"
+      ];
+      return bases.some(base => name.startsWith(base));
+    }
+
+    function createTab(filename = null, content = "", encoding = "UTF8", fileHandle = null, rawBytes = null, skipSelect = false) {
       const id = 'tab_' + (++tabIdCounter);
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
-      session.on('change', () => { const tab = tabs.find(t => t.id === id); if (tab) { tab.isDirty = !session.getUndoManager().isClean(); renderTabs(); if (id === activeTabId) updateTitleAndStatus(); } });
+      session.on('change', () => {
+        setTimeout(() => {
+          const tab = tabs.find(t => t.id === id);
+          if (tab) {
+            tab.isDirty = !session.getUndoManager().isClean();
+            renderTabs();
+            if (id === activeTabId) updateTitleAndStatus();
+          }
+        }, 0);
+      });
       
-      // ★ 多言語対応による「無題」の翻訳 ★
-      if (filename === "無題") {
-          const texts = translations[currentLang].texts;
-          filename = texts['new'] ? texts['new'].replace('(N)', '').trim() : "Untitled";
+      // ★ 新規ファイル名（多言語対応 ＆ 重複回避） ★
+      if (!filename || filename === "無題" || filename === "Untitled") {
+          filename = generateUntitledFilename();
       }
 
       tabs.push({ id, filename, fileHandle, encoding, isDirty: false, session, rawBytes });
@@ -700,7 +766,7 @@
           
           if (payload && Array.isArray(payload)) {
             await deleteTransferData(transferId);
-            if (tabs.length === 1 && tabs[0].filename === "無題" && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs = [];
+            if (tabs.length === 1 && isUntitledTab(tabs[0])) tabs = [];
             
             let toIndex = tabs.length;
             if (targetEl && targetTabId && tabs.length > 0) { const rect = targetEl.getBoundingClientRect(); const isLeft = (e.clientX - rect.left) < (rect.width / 2); toIndex = tabs.findIndex(t => t.id === targetTabId) + (isLeft ? 0 : 1); if(toIndex < 0) toIndex = tabs.length; }
@@ -866,7 +932,7 @@
       const content = Encoding.codeToString(unicodeArray);
       
       const currentTab = getActiveTab();
-      if (currentTab && (currentTab.filename === "無題" || currentTab.filename === "Untitled") && !currentTab.isDirty && currentTab.session.getValue() === "") { 
+      if (currentTab && isUntitledTab(currentTab)) { 
           currentTab.filename = file.name; currentTab.fileHandle = handle; currentTab.encoding = detected; 
           currentTab.rawBytes = bytes;
           currentTab.session.setValue(content); currentTab.session.getUndoManager().markClean(); currentTab.isDirty = false; 
@@ -946,7 +1012,7 @@
     if ('launchQueue' in window) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || launchParams.files.length === 0) return;
-        if (tabs.length === 1 && (tabs[0].filename === "無題" || tabs[0].filename === "Untitled") && !tabs[0].isDirty && tabs[0].session.getValue() === "") tabs.pop();
+        if (tabs.length === 1 && isUntitledTab(tabs[0])) tabs.pop();
         for (const handle of launchParams.files) { if (handle.kind === 'file') { const file = await handle.getFile(); await loadFileProcess(file, handle); await addRecentFile(file.name, handle); } }
       });
     }
