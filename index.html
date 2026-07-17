@@ -14,6 +14,7 @@
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
+    /* タブバー */
     .tab-bar { display: flex; background: #e8eaed; padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
@@ -32,6 +33,7 @@
     .add-tab-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-left: 5px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; font-size: 18px; color: #555; -webkit-app-region: no-drag; }
     .add-tab-btn:hover { background: #d0d0d0; }
 
+    /* メニューバー */
     .menu-bar { background: #fff; display: flex; font-size: var(--ui-font-size); border-bottom: 1px solid #eee; user-select: none; position: relative; z-index: 1000; padding: 2px 5px; }
     .menu-container { position: relative; }
     .menu-item-btn { padding: 6px 12px; cursor: default; border-radius: 4px; }
@@ -51,6 +53,7 @@
 
     #editor { flex: 1; width: 100%; min-height: 0; position: relative; }
     
+    /* ステータスバー */
     .status-bar { background: #f9f9f9; border-top: 1px solid #ddd; padding: 4px 15px; font-size: var(--ui-font-size); display: flex; justify-content: space-between; color: #555; user-select: none; }
     .status-left { display: flex; align-items: center; gap: 15px; }
     .status-right { display: flex; align-items: center; }
@@ -60,6 +63,7 @@
     
     #fileInputFallback { display: none; }
 
+    /* モーダル群 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 2400; justify-content: center; align-items: center; }
     .modal-content { background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 30px; min-width: 320px; font-size: var(--ui-font-size); font-family: 'Segoe UI', Meiryo, sans-serif; }
     .modal-buttons { text-align: right; margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
@@ -67,6 +71,7 @@
     .modal-buttons button.primary { background: #0067c0; color: #fff; border-color: #005a9e; }
     .modal-buttons button:hover { background: #d5d5d5; }
 
+    /* 検索・置換ダイアログ */
     .win-dialog {
       display: none; position: fixed; background: #f0f0f0; border: 1px solid #666;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3); z-index: 2500; font-size: 12px;
@@ -101,6 +106,7 @@
 </head>
 <body>
 
+  <!-- ダイアログ群 -->
   <div id="aboutModal" class="modal-overlay">
     <div class="modal-content">
       <h3>バージョン情報</h3>
@@ -125,7 +131,7 @@
     </div>
   </div>
 
-  <div id="winDialogOverlay" class="modal-overlay" style="background: rgba(0, 0, 0, 0.15); z-index: 2400;" onclick="closeAllWinDialogs()"></div>
+  <div id="winDialogOverlay" class="modal-overlay" onclick="closeAllWinDialogs()"></div>
 
   <!-- 検索ダイアログ -->
   <div id="winFindDialog" class="win-dialog" style="top: 25%; left: calc(50% - 240px);">
@@ -184,6 +190,7 @@
     </div>
   </div>
 
+  <!-- メインUI -->
   <div class="tab-bar" id="tab-bar">
     <div class="add-tab-btn" onclick="menuAction('new')" title="新しいタブを追加">+</div>
   </div>
@@ -349,7 +356,7 @@
       if (event.data.type === 'tabs-adopted') {
         const tid = event.data.transferId;
         if (activeTransfers.has(tid)) {
-          console.log('[DEBUG] Remote adoption confirmed via BC. Removing tabs locally.');
+          console.log('[DEBUG] Remote adoption confirmed. Removing tabs locally.');
           const tidsToRemove = activeTransfers.get(tid);
           tidsToRemove.forEach(id => closeTab(id, null, true));
           activeTransfers.delete(tid);
@@ -389,9 +396,10 @@
       tabs.splice(tabIndex, 1); selectedTabs.delete(id);
 
       if (tabs.length === 0) { 
-        console.log('[DEBUG] All tabs closed. Creating a blank tab to survive.');
-        // ★ ウィンドウを絶対に閉じさせない ★
-        createTab(); 
+        console.log('[DEBUG] All tabs closed. Closing window safely.');
+        // ★ タブが0になったらウィンドウを正しく閉じる ★
+        window.close(); 
+        setTimeout(() => { if (tabs.length === 0) createTab(undefined, undefined, undefined, null, null, true); }, 200); 
       } else {
         if (activeTabId === id) { const nextIndex = Math.max(0, tabIndex - 1); selectedTabs.clear(); selectedTabs.add(tabs[nextIndex].id); switchTab(tabs[nextIndex].id); }
         else { renderTabs(); }
@@ -409,7 +417,7 @@
         if (tab.id === activeTabId) tabEl.classList.add('active'); else if (selectedTabs.has(tab.id)) tabEl.classList.add('selected'); 
         
         tabEl.draggable = true;
-        tabEl.ondragstart = (e) => {
+        tabEl.ondragstart = async (e) => {
           console.log('[DEBUG] dragstart on tab:', tab.id);
           isDragging = true; 
           
@@ -458,13 +466,11 @@
               
               ghostElement.appendChild(ghostHeader); ghostElement.appendChild(ghostMenu); ghostElement.appendChild(ghostBody); document.body.appendChild(ghostElement);
               e.dataTransfer.setDragImage(ghostElement, 40, 15);
-          } catch(err) { console.error('[DEBUG] Ghost preview creation failed.', err); }
+          } catch(err) {}
 
           const payload = movingTabs.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes }; });
           
-          // IndexedDBへの保存を開始
           saveTransferData(currentDragTid, payload);
-          
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
         
@@ -488,17 +494,19 @@
 
           if (tid) {
              console.log('[DEBUG] Checking synchronous adoption flag for tid:', tid);
-             // ★ localStorageによる完全同期の受け渡し判定（ラグなし） ★
-             const isAdopted = localStorage.getItem('sync_adopted_' + tid) === 'true';
-             console.log('[DEBUG] isAdopted immediately:', isAdopted);
-             
-             if (!isAdopted) {
-                 console.log('[DEBUG] Not adopted anywhere. Opening new window...');
-                 window.open('./index.html?transfer=' + tid, '_blank');
-             } else {
-                 console.log('[DEBUG] Adopted locally or remotely. Skipping new window.');
-             }
-             localStorage.removeItem('sync_adopted_' + tid);
+             setTimeout(() => {
+                 const isAdopted = localStorage.getItem('sync_adopted_' + tid) === 'true';
+                 console.log('[DEBUG] After wait. isAdopted:', isAdopted, 'tid:', tid);
+                 
+                 if (!isAdopted && activeTransfers.has(tid)) {
+                     console.log('[DEBUG] Not adopted anywhere. Opening new window...');
+                     // ★ width, height, noopener を付与してChromeOS環境でも確実に「アプリの別ウィンドウ」として開く ★
+                     window.open('./index.html?transfer=' + tid, '_blank', 'width=800,height=600,noopener,noreferrer');
+                 } else {
+                     console.log('[DEBUG] Adopted locally or remotely. Skipping new window.');
+                 }
+                 localStorage.removeItem('sync_adopted_' + tid);
+             }, 300);
           }
           
           setTimeout(() => { isDragging = false; }, 100); 
@@ -552,6 +560,7 @@
     };
 
     document.addEventListener('mousedown', e => {
+      console.log('[DEBUG] mousedown globally. target:', e.target);
       if (!e.target.closest('.menu-container')) closeMenus();
       
       if (!isDragging && !e.target.closest('.tab') && !e.target.closest('.win-dialog') && !e.target.closest('.menu-container') && selectedTabs.size > 1) {
@@ -572,11 +581,9 @@
       console.log('[DEBUG] Dropped transferId:', transferId);
       
       if (transferId) {
-        // ★ ドロップを受け取った瞬間に同期的に localStorage へフラグを書き込む ★
         localStorage.setItem('sync_adopted_' + transferId, 'true');
         
         if (activeTransfers.has(transferId)) {
-          // 自ウィンドウ内での並べ替え
           console.log('[DEBUG] Reordering tabs within the same window.');
           let toIndex = tabs.length;
           let isLeft = true;
@@ -598,17 +605,14 @@
           } else { toIndex = tabs.length; }
           
           tabs.splice(toIndex, 0, ...movedTabs); 
-          
           activeTransfers.delete(transferId);
           deleteTransferData(transferId);
           
           setTimeout(() => { renderTabs(); }, 10);
         } else {
-          // 他ウィンドウからのドロップ
           console.log('[DEBUG] Receiving tabs from another window.');
           bc.postMessage({ type: 'tabs-adopted', transferId });
           
-          // IndexedDBからの取得を待機
           let payload = await getTransferData(transferId);
           if (!payload) {
              console.log('[DEBUG] DB read empty, waiting 150ms for save to complete...');
@@ -858,7 +862,6 @@
       });
     }
 
-    // ★ 起動時のデータ受け取り ★
     initDB().then(async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTransferId = urlParams.get('transfer');
@@ -866,7 +869,6 @@
       console.log('[DEBUG] Initializing window. urlTransferId:', urlTransferId);
       
       if (urlTransferId) {
-        // ★ IndexedDBからの取得を最大300msリトライして待つ（データ保存のラグ対策） ★
         let payload = await getTransferData(urlTransferId);
         if (!payload) {
             console.log('[DEBUG] DB read empty, waiting 150ms for save to complete...');
