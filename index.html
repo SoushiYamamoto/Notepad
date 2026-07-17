@@ -15,7 +15,7 @@
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
     
     /* タブバー */
-    .tab-bar { display: flex; background: #e8eaed; padding: max(5px, env(titlebar-area-y, 5px)) env(titlebar-area-right, 5px) 0 max(5px, env(titlebar-area-x, 5px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; }
+    .tab-bar { display: flex; background: #e8eaed; padding: max(8px, env(titlebar-area-y, 8px)) env(titlebar-area-right, 5px) 0 max(8px, env(titlebar-area-x, 8px)); box-shadow: inset 0 -1px 0 0 #ccc; align-items: flex-end; overflow-x: auto; overflow-y: hidden; user-select: none; -webkit-app-region: drag; transition: background-color 0.15s, box-shadow 0.15s; min-height: 44px; box-sizing: border-box; }
     .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
     .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
     .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
@@ -751,7 +751,9 @@
     });
 
     async function handleTabDrop(e, targetEl, targetTabId) {
-      e.stopPropagation(); if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
+      e.stopPropagation();
+      removeDragActive();
+      if (targetEl) targetEl.classList.remove('drag-over-left', 'drag-over-right');
       
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
@@ -1060,7 +1062,8 @@
             encoding: t.encoding,
             isDirty: t.isDirty,
             fileHandle: t.fileHandle,
-            rawBytes: t.rawBytes
+            rawBytes: t.rawBytes,
+            history: t.session.getUndoManager().toJSON()
           }))
         };
         const tx = db.transaction('settings', 'readwrite');
@@ -1116,6 +1119,13 @@
         if (t) {
           t.isDirty = data.isDirty;
           t.isDirtyAtRestoration = data.isDirty;
+          if (data.history) {
+            try {
+              t.session.getUndoManager().fromJSON(data.history);
+            } catch (e) {
+              console.error("Failed to restore history", e);
+            }
+          }
         }
       });
 
@@ -1197,6 +1207,7 @@
 
     // リロード前の状態保存 (localStorage)
     window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem('is_reload', 'true');
       const backupState = {
         activeTabId: activeTabId,
         selectedTabIds: Array.from(selectedTabs),
@@ -1205,7 +1216,8 @@
           filename: t.filename,
           content: t.session.getValue(),
           encoding: t.encoding,
-          isDirty: t.isDirty
+          isDirty: t.isDirty,
+          history: t.session.getUndoManager().toJSON()
         })),
         timestamp: Date.now()
       };
@@ -1253,7 +1265,12 @@
           createTab(); 
         }
       } else {
-        const restored = await restoreWorkspace();
+        const isReload = sessionStorage.getItem('is_reload') === 'true';
+        sessionStorage.removeItem('is_reload');
+        let restored = false;
+        if (isReload) {
+          restored = await restoreWorkspace();
+        }
         if (!restored) {
           createTab();
         }
