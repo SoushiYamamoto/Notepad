@@ -18,7 +18,7 @@
     .tab-bar {
       display: flex;
       background: #e8eaed;
-      padding: 8px 180px 0 8px; /* Default padding for standard mode: right is 180px, left is 8px */
+      padding: 8px 440px 0 8px; /* Default padding for standard mode: right is 440px, left is 8px */
       box-shadow: inset 0 -1px 0 0 #ccc;
       align-items: flex-end;
       overflow-x: auto;
@@ -28,17 +28,25 @@
       transition: background-color 0.15s, box-shadow 0.15s;
       min-height: 44px;
       box-sizing: border-box;
+      
+      /* Scrollbar hiding to avoid thick gray lines in small windows */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+    }
+    .tab-bar::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
 
     @media (display-mode: window-controls-overlay) {
       .tab-bar {
         padding-top: max(8px, env(titlebar-area-y, 8px));
         padding-left: max(8px, env(titlebar-area-x, 8px));
-        padding-right: calc(100vw - env(titlebar-area-right, 180px));
+        padding-right: calc(100vw - env(titlebar-area-right, 440px));
       }
     }
-    .tab-bar::-webkit-scrollbar { height: 4px; -webkit-app-region: no-drag; }
-    .tab-bar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
+
     .tab-bar.drag-over-empty { background-color: #d0e3f5 !important; box-shadow: inset 0 0 10px rgba(0, 103, 192, 0.25), inset 0 -1px 0 0 #ccc !important; }
     
     .tab {
@@ -46,9 +54,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex: 1 1 200px; /* Preferred size is 200px, grow to fill space, shrink if tight */
-      min-width: 50px;
-      max-width: 220px; /* Slightly wider for better legibility */
+      width: var(--dynamic-tab-width, 156px);
+      flex: 0 0 var(--dynamic-tab-width, 156px);
       padding: 6px 10px 7px 10px;
       margin-right: 2px;
       background: #f3f3f3;
@@ -58,7 +65,7 @@
       font-size: var(--ui-font-size);
       color: #555;
       cursor: default;
-      transition: background 0.2s, max-width 0.2s;
+      transition: background 0.2s;
       white-space: nowrap;
       overflow: hidden;
       -webkit-app-region: no-drag;
@@ -815,9 +822,16 @@
         tabEl.appendChild(titleEl); tabEl.appendChild(closeEl); tabBar.insertBefore(tabEl, tabBar.lastElementChild);
       });
       updateI18n(); // 言語切り替えの反映
+      adjustTabWidths(); // 動的タブ幅の計算と反映
     }
 
     const tabBar = document.getElementById('tab-bar');
+    tabBar.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        tabBar.scrollLeft += e.deltaY;
+      }
+    });
     tabBar.ondragover = (e) => { 
         e.preventDefault(); 
         if (e.dataTransfer.types.length > 0) { tabBar.classList.add('drag-over-empty'); }
@@ -1249,6 +1263,23 @@
       const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
       document.getElementById('tab-bar-title-text').innerText = appName;
     }
+
+    function adjustTabWidths() {
+      const windowWidth = window.innerWidth;
+      const numTabs = tabs.length;
+      if (numTabs === 0) return;
+      
+      const titlebarWidth = 440; // Chrome's WCO titlebar buttons width fallback
+      const labelWidth = 80;     // Icon + app name label width
+      
+      // タブの幅(px) = min(156px, max(70px, (ウィンドウ幅 - 最小化時のタイトルバーの幅(=440px) - アイコンとアプリ名ラベルの幅(=80px)) / タブ数))
+      const computedWidth = (windowWidth - titlebarWidth - labelWidth) / numTabs;
+      const tabWidth = Math.min(156, Math.max(70, computedWidth));
+      
+      document.documentElement.style.setProperty('--dynamic-tab-width', `${tabWidth}px`);
+    }
+
+    window.addEventListener('resize', adjustTabWidths);
 
     if (navigator.windowControlsOverlay) {
       navigator.windowControlsOverlay.addEventListener('geometrychange', updateWCOVisibility);
