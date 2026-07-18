@@ -18,7 +18,7 @@
     .tab-bar {
       display: flex;
       background: #e8eaed;
-      padding: 8px 220px 0 8px; /* Default padding for standard mode: right is 440px, left is 8px */
+      padding: 8px 270px 0 8px; /* Default padding for standard mode: right is 440px, left is 8px */
       box-shadow: inset 0 -1px 0 0 #ccc;
       align-items: flex-end;
       overflow-x: auto;
@@ -43,7 +43,7 @@
       .tab-bar {
         padding-top: max(8px, env(titlebar-area-y, 8px));
         padding-left: max(8px, env(titlebar-area-x, 8px));
-        padding-right: calc(100vw - env(titlebar-area-right, 220px));
+        padding-right: calc(100vw - env(titlebar-area-right, 270px));
       }
     }
 
@@ -1358,10 +1358,10 @@
       const numTabs = tabs.length;
       if (numTabs === 0) return;
       
-      const titlebarWidth = 220; // Chrome's WCO titlebar buttons width fallback
+      const titlebarWidth = 270; // Chrome's WCO titlebar buttons width fallback
       const labelWidth = 80;     // Icon + app name label width
       
-      // タブの幅(px) = min(156px, max(70px, (ウィンドウ幅 - 最小化時のタイトルバーの幅(=220px) - アイコンとアプリ名ラベルの幅(=80px)) / タブ数))
+      // タブの幅(px) = min(156px, max(70px, (ウィンドウ幅 - 最小化時のタイトルバーの幅(=270px) - アイコンとアプリ名ラベルの幅(=80px)) / タブ数))
       const computedWidth = (windowWidth - titlebarWidth - labelWidth) / numTabs;
       const tabWidth = Math.min(156, Math.max(70, computedWidth));
       
