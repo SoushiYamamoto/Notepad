@@ -358,6 +358,7 @@
           </div>
         </div>
         <div class="dropdown-item" onclick="toggleWordWrap()" id="menu-wrap-check"><span data-i18n="word_wrap">右端で折り返す(W)</span></div>
+        <div class="dropdown-item" onclick="toggleAlwaysOnTop()" id="menu-always-top-check"><span>常に手前に表示(T)</span></div>
 
       </div>
     </div>
@@ -555,6 +556,8 @@
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         try { navigator.serviceWorker.controller.postMessage({ type: 'FOCUS_ALL_WINDOWS' }); } catch(e) {}
       }
+      // 拡張機能へ通知してOSレベルで全メモ帳ウィンドウを前面へ引き上げる
+      try { window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*'); } catch(e) {}
     }
 
     bc.onmessage = (event) => {
@@ -1273,12 +1276,37 @@
       return true;
     }
 
+    let isAlwaysOnTop = false;
+
+    function toggleAlwaysOnTop() {
+      closeMenus();
+      window.postMessage({ source: 'NOTEPAD_APP', action: 'TOGGLE_ALWAYS_ON_TOP' }, '*');
+    }
+
+    function updateAlwaysOnTopMenu() {
+      const el = document.getElementById('menu-always-top-check');
+      if (el) {
+        el.innerHTML = (isAlwaysOnTop ? "✔ " : "") + "<span>常に手前に表示(T)</span>";
+      }
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.source === 'NOTEPAD_EXTENSION') {
+        if (event.data.type === 'ALWAYS_ON_TOP_STATUS') {
+          isAlwaysOnTop = event.data.isAlwaysOnTop;
+          updateAlwaysOnTopMenu();
+        }
+      }
+    });
+
     function updateWCOVisibility() {
       const titleEl = document.getElementById('tab-bar-title');
       if (!titleEl) return;
       titleEl.style.display = 'flex'; // ALWAYS show
       const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
       document.getElementById('tab-bar-title-text').innerText = appName;
+      updateAlwaysOnTopMenu();
+      window.postMessage({ source: 'NOTEPAD_APP', action: 'CHECK_ALWAYS_ON_TOP' }, '*');
     }
 
     function adjustTabWidths() {
