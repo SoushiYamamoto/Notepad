@@ -18,7 +18,7 @@
     .tab-bar {
       display: flex;
       background: #e8eaed;
-      padding: 8px 440px 0 8px; /* Default padding for standard mode: right is 440px, left is 8px */
+      padding: 8px 220px 0 8px; /* Default padding for standard mode: right is 440px, left is 8px */
       box-shadow: inset 0 -1px 0 0 #ccc;
       align-items: flex-end;
       overflow-x: auto;
@@ -43,7 +43,7 @@
       .tab-bar {
         padding-top: max(8px, env(titlebar-area-y, 8px));
         padding-left: max(8px, env(titlebar-area-x, 8px));
-        padding-right: calc(100vw - env(titlebar-area-right, 440px));
+        padding-right: calc(100vw - env(titlebar-area-right, 220px));
       }
     }
 
@@ -80,7 +80,7 @@
     .tab.drag-over-right::after { content: ""; position: absolute; right: -3px; top: 15%; bottom: 15%; width: 4px; background: #0078d7; border-radius: 4px; box-shadow: 0 0 6px rgba(0,120,215,0.6); z-index: 10; pointer-events: none; }
 
     .tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-    .tab-close { margin-left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; color: #777; flex-shrink: 0; }
+    .tab-close { margin-left: 4px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: normal; cursor: pointer; color: #777; flex-shrink: 0; }
     .tab-close:hover { background: #ccc; color: #000; }
     .add-tab-btn {
       width: 28px;
@@ -113,7 +113,7 @@
       gap: 6px;
       padding: 0 10px 7px 10px;
       font-size: 12px;
-      font-weight: bold;
+      font-weight: normal;
       color: #333;
       user-select: none;
       -webkit-app-region: drag;
@@ -173,7 +173,7 @@
       font-family: 'MS UI Gothic', 'Meiryo', sans-serif; padding: 12px 15px; color: #000;
       user-select: none; width: 480px; max-width: 95vw; border-radius: 2px; box-sizing: border-box; margin: 0;
     }
-    .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: bold; }
+    .win-dialog-header { display: flex; justify-content: space-between; margin-bottom: 15px; cursor: move; font-weight: normal; }
     .win-dialog-close { cursor: pointer; padding: 0 4px; font-size: 14px; }
     .win-dialog-content { display: flex; gap: 10px; width: 100%; box-sizing: border-box; }
     .win-dialog-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; }
@@ -1269,10 +1269,10 @@
       const numTabs = tabs.length;
       if (numTabs === 0) return;
       
-      const titlebarWidth = 440; // Chrome's WCO titlebar buttons width fallback
+      const titlebarWidth = 220; // Chrome's WCO titlebar buttons width fallback
       const labelWidth = 80;     // Icon + app name label width
       
-      // タブの幅(px) = min(156px, max(70px, (ウィンドウ幅 - 最小化時のタイトルバーの幅(=440px) - アイコンとアプリ名ラベルの幅(=80px)) / タブ数))
+      // タブの幅(px) = min(156px, max(70px, (ウィンドウ幅 - 最小化時のタイトルバーの幅(=220px) - アイコンとアプリ名ラベルの幅(=80px)) / タブ数))
       const computedWidth = (windowWidth - titlebarWidth - labelWidth) / numTabs;
       const tabWidth = Math.min(156, Math.max(70, computedWidth));
       
