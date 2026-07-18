@@ -358,6 +358,7 @@
           </div>
         </div>
         <div class="dropdown-item" onclick="toggleWordWrap()" id="menu-wrap-check"><span data-i18n="word_wrap">右端で折り返す(W)</span></div>
+        <div class="dropdown-item" onclick="toggleAlwaysOnTop()" id="menu-always-top-check"><span>常に手前に表示(T)</span></div>
       </div>
     </div>
 
@@ -787,6 +788,9 @@
                      window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
                  }
                  localStorage.removeItem('sync_adopted_' + tid);
+                 // 移動元ウィンドウを最前面に維持するためフォーカスを復帰させる
+                 window.focus();
+                 setTimeout(() => window.focus(), 100);
              }, 150); // 最短待機で誤動作ゼロへ
           }
           
@@ -1256,12 +1260,97 @@
       return true;
     }
 
+    let isAlwaysOnTop = false;
+    let pipWindowInstance = null;
+
+    async function toggleAlwaysOnTop() {
+      closeMenus();
+      if ('documentPictureInPicture' in window) {
+        if (pipWindowInstance) {
+          pipWindowInstance.close();
+          pipWindowInstance = null;
+          isAlwaysOnTop = false;
+          updateAlwaysOnTopMenu();
+          return;
+        }
+        try {
+          const pipWin = await documentPictureInPicture.requestWindow({
+            width: 700,
+            height: 500
+          });
+          pipWindowInstance = pipWin;
+          isAlwaysOnTop = true;
+          updateAlwaysOnTopMenu();
+
+          // スタイルシートをPiPウィンドウへ適用
+          [...document.styleSheets].forEach((styleSheet) => {
+            try {
+              const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+              const style = document.createElement('style');
+              style.textContent = cssRules;
+              pipWin.document.head.appendChild(style);
+            } catch (e) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = styleSheet.href;
+              pipWin.document.head.appendChild(link);
+            }
+          });
+
+          // PiPウィンドウのレイアウト構築
+          pipWin.document.body.className = document.body.className;
+          pipWin.document.body.style.margin = '0';
+          pipWin.document.body.style.height = '100vh';
+          pipWin.document.body.style.display = 'flex';
+          pipWin.document.body.style.flexDirection = 'column';
+
+          const pipContainer = document.createElement('div');
+          pipContainer.id = 'pip-content';
+          pipContainer.style.flex = '1';
+          pipContainer.style.display = 'flex';
+          pipContainer.style.flexDirection = 'column';
+          pipContainer.innerHTML = document.body.innerHTML;
+          pipWin.document.body.appendChild(pipContainer);
+
+          // エディターインスタンスの同期接続
+          const pipEditorDiv = pipWin.document.getElementById('editor');
+          if (pipEditorDiv) {
+            const pipEditor = ace.edit(pipEditorDiv);
+            const activeTab = getActiveTab();
+            if (activeTab) {
+              pipEditor.setSession(activeTab.session);
+            }
+          }
+
+          pipWin.addEventListener('pagehide', () => {
+            pipWindowInstance = null;
+            isAlwaysOnTop = false;
+            updateAlwaysOnTopMenu();
+          });
+
+        } catch(err) {
+          console.error("PiP error", err);
+          alert("「常に手前に表示」ウィンドウの起動に失敗しました。");
+        }
+      } else {
+        alert("お使いの環境（ブラウザ）は「常に手前に表示 (Document Picture-in-Picture)」機能に対応していません。");
+      }
+    }
+
+    function updateAlwaysOnTopMenu() {
+      const el = document.getElementById('menu-always-top-check');
+      if (el) {
+        el.innerHTML = (isAlwaysOnTop ? "✔ " : "") + "<span>常に手前に表示(T)</span>";
+      }
+    }
+
     function updateWCOVisibility() {
       const titleEl = document.getElementById('tab-bar-title');
       if (!titleEl) return;
       titleEl.style.display = 'flex'; // ALWAYS show
       const appName = currentLang === 'ja' ? 'メモ帳' : 'Notepad';
       document.getElementById('tab-bar-title-text').innerText = appName;
+      updateAlwaysOnTopMenu();
     }
 
     function adjustTabWidths() {
@@ -1317,7 +1406,10 @@
     const removeDragActive = () => {
       document.body.classList.remove('drag-active');
     };
-    window.addEventListener('dragend', removeDragActive);
+    window.addEventListener('dragend', () => {
+      removeDragActive();
+      window.focus();
+    });
     window.addEventListener('drop', removeDragActive);
     document.addEventListener('dragleave', (e) => {
       if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
