@@ -627,6 +627,10 @@
       return bases.some(base => name.startsWith(base));
     }
 
+    function appLog(...args) {
+      console.log(`%c[Notepad App] ${new Date().toISOString().substring(11,23)}`, "color: #2b8a3e; font-weight: bold;", ...args);
+    }
+
     function createTab(filename = null, content = "", encoding = "UTF8", fileHandle = null, rawBytes = null, skipSelect = false) {
       const id = 'tab_' + (++tabIdCounter);
       const session = new ace.EditSession(content); session.setMode("ace/mode/text"); session.setUndoManager(new ace.UndoManager());
@@ -765,6 +769,8 @@
 
           const payload = movingTabs.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes }; });
           
+          appLog('ondragstart triggered. transferId:', currentDragTid, 'movingTabs:', movingTabs, 'payload:', payload);
+          try { localStorage.setItem('notepad_transfer_payload_' + currentDragTid, JSON.stringify(payload)); } catch(e) {}
           saveTransferData(currentDragTid, payload);
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
         };
@@ -786,19 +792,22 @@
           currentDragTid = null;
 
           if (tid) {
+             appLog('ondragend fired. Checking adoption for transferId:', tid);
              setTimeout(() => {
                  const isAdopted = localStorage.getItem('sync_adopted_' + tid) === 'true';
+                 appLog('Adoption check result for transferId:', tid, 'isAdopted:', isAdopted, 'activeTransfers.has:', activeTransfers.has(tid));
                  if (!isAdopted && activeTransfers.has(tid)) {
-                     // ★ ドロップしたマウス位置を中心に新規分離ウィンドウを開く ★
                      let left = e.screenX - 100;
                      let top = e.screenY - 20;
                      if (left < 0) left = 0;
                      if (top < 0) top = 0;
+                     appLog('Tab was NOT adopted by an existing window. Detaching into NEW window:', `./index.html?transfer=${tid}`);
                      window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
                      
-                     // 新規ドロップウィンドウが一番手前に来るよう、転送ID付きでフォーカス要求を拡張機能へ通知
+                     // 拡張機能へ通知：新規ウィンドウIDと全メモ帳の最前面配置を要求
                      window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT', newWindowTransferId: tid }, '*');
                  } else {
+                     appLog('Tab was successfully adopted by target window.');
                      window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*');
                  }
                  localStorage.removeItem('sync_adopted_' + tid);
@@ -881,6 +890,8 @@
       let transferId = e.dataTransfer.getData('application/x-notepad-tabs');
       if (!transferId) { const txt = e.dataTransfer.getData('text/plain'); if (txt && txt.startsWith('notepad-transfer:')) transferId = txt.split(':')[1]; }
       
+      appLog('handleTabDrop triggered. transferId:', transferId, 'targetTabId:', targetTabId);
+      
       if (transferId) {
         // 同期的に受け取りフラグを立てる
         localStorage.setItem('sync_adopted_' + transferId, 'true');
@@ -913,11 +924,19 @@
         } else {
           bc.postMessage({ type: 'tabs-adopted', transferId });
           
-          let payload = await getTransferData(transferId);
+          let payload = null;
+          try {
+            const rawStr = localStorage.getItem('notepad_transfer_payload_' + transferId);
+            if (rawStr) payload = JSON.parse(rawStr);
+          } catch(e) {}
           if (!payload) {
-             await new Promise(r => setTimeout(r, 150));
-             payload = await getTransferData(transferId);
+            payload = await getTransferData(transferId);
+            if (!payload) {
+               await new Promise(r => setTimeout(r, 150));
+               payload = await getTransferData(transferId);
+            }
           }
+          appLog('Loaded payload for transferId:', transferId, payload);
           
           if (payload && Array.isArray(payload)) {
             await deleteTransferData(transferId);
@@ -1403,14 +1422,24 @@
       updateWCOVisibility();
       
       if (urlTransferId) {
-        let payload = await getTransferData(urlTransferId);
+        appLog('New window initialized with urlTransferId:', urlTransferId);
+        let payload = null;
+        try {
+          const rawStr = localStorage.getItem('notepad_transfer_payload_' + urlTransferId);
+          if (rawStr) payload = JSON.parse(rawStr);
+        } catch(e) {}
         if (!payload) {
-            await new Promise(r => setTimeout(r, 150));
-            payload = await getTransferData(urlTransferId);
+          payload = await getTransferData(urlTransferId);
+          if (!payload) {
+              await new Promise(r => setTimeout(r, 150));
+              payload = await getTransferData(urlTransferId);
+          }
         }
-        
+        appLog('Payload retrieved for urlTransferId:', urlTransferId, payload);
+
         if (payload && Array.isArray(payload)) {
           localStorage.setItem('sync_adopted_' + urlTransferId, 'true');
+          localStorage.removeItem('notepad_transfer_payload_' + urlTransferId);
           bc.postMessage({ type: 'tabs-adopted', transferId: urlTransferId }); 
           await deleteTransferData(urlTransferId);
           
@@ -1424,7 +1453,12 @@
           renderTabs();
           if (tabs.length > 0) switchTab(tabs[0].id);
           window.history.replaceState({}, document.title, window.location.pathname);
+
+          // 拡張機能へ新規ウィンドウロード完了と最前面ソートを通知
+          appLog('Notifying Extension NEW_WINDOW_READY for transferId:', urlTransferId);
+          window.postMessage({ source: 'NOTEPAD_APP', action: 'NEW_WINDOW_READY', transferId: urlTransferId }, '*');
         } else { 
+          appLog('No payload found for urlTransferId:', urlTransferId, 'Creating blank tab.');
           createTab(); 
         }
       } else {
