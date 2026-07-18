@@ -1,10 +1,9 @@
-// メモ帳 PWA 専用 拡張機能 Background Service Worker (無点滅・ウィンドウ即時移動＆Zオーダー最適化版)
+// メモ帳 PWA 専用 拡張機能 Background Service Worker (無点滅・ウィンドウ直接移動＆Zオーダー最適化版)
 
 const alwaysOnTopWindows = new Set();
 let isFocusingSequence = false;
 let lastSourceWindowId = null;
 
-// メモ帳ウィンドウのフォーカス履歴（最も新しいものが先頭 [0]）
 let notepadWindowStack = [];
 
 function log(...args) {
@@ -88,21 +87,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
-  // 2. ドラッグ開始／進行時またはウインドウ移動時
+  // 2. 現ウィンドウの直接座標移動（全タブ移動時）
+  else if (message.action === "MOVE_WINDOW") {
+    if (currentWinId) {
+      const leftPos = Math.round(message.left);
+      const topPos = Math.round(message.top);
+      log(`Moving existing window ${currentWinId} directly to screen coords (${leftPos}, ${topPos})`);
+      chrome.windows.update(currentWinId, {
+        left: leftPos,
+        top: topPos,
+        focused: true
+      }).catch((err) => {
+        log(`Failed to move window ${currentWinId}:`, err.message);
+      });
+    }
+  }
+
+  // 3. ドラッグ開始／進行時またはウインドウ移動時
   else if (message.action === "BRING_ALL_TO_FRONT") {
     if (currentWinId) lastSourceWindowId = currentWinId;
     log("BRING_ALL_TO_FRONT. currentWinId:", currentWinId);
     arrangeNotepadWindows(currentWinId, null);
   }
 
-  // 3. 新規分離ウィンドウからのロード完了通知（最優先・無フラッシュ配置）
+  // 4. 新規分離ウィンドウからのロード完了通知（最優先・無フラッシュ配置）
   else if (message.action === "NEW_WINDOW_READY") {
     const newWinId = currentWinId;
     log("NEW_WINDOW_READY received. newWinId:", newWinId, "lastSourceWinId:", lastSourceWindowId);
     arrangeNotepadWindows(lastSourceWindowId, newWinId);
   }
 
-  // 4. 状態確認
+  // 5. 状態確認
   else if (message.action === "CHECK_ALWAYS_ON_TOP") {
     if (currentWinId) {
       const isTop = alwaysOnTopWindows.has(currentWinId);
@@ -119,8 +134,6 @@ async function arrangeNotepadWindows(sourceWinId, newWinId) {
     const notepadWindows = windows.filter(isNotepadWindow);
     log(`Arranging ${notepadWindows.length} Notepad windows. sourceWinId: ${sourceWinId}, newWinId: ${newWinId}`);
 
-    // チラつき（フラッシュ）を100%防ぐ最小最適化フォーカス処理：
-    // 全ウィンドウを何度もループフォーカスするのではなく、移動元と新規ウィンドウのみをピンポイントで最前面化
     if (sourceWinId && sourceWinId !== newWinId && notepadWindows.some(w => w.id === sourceWinId)) {
       log("Step 1: Raising source window above background apps:", sourceWinId);
       await safeFocusWindow(sourceWinId);

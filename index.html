@@ -10,6 +10,7 @@
   <link rel="icon" type="image/png" sizes="96x96" href="favicon96.png">
   
   <style>
+    *, *::before, *::after { transition: none !important; animation: none !important; }
     :root { --ui-font-size: 13px; }
 
     body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; overflow: hidden; background: #fff; }
@@ -25,7 +26,7 @@
       overflow-y: hidden;
       user-select: none;
       -webkit-app-region: drag;
-      transition: background-color 0.15s, box-shadow 0.15s;
+      
       min-height: 44px;
       box-sizing: border-box;
       
@@ -65,7 +66,7 @@
       font-size: var(--ui-font-size);
       color: #555;
       cursor: default;
-      transition: background 0.2s;
+      
       white-space: nowrap;
       overflow: hidden;
       -webkit-app-region: no-drag;
@@ -774,7 +775,7 @@
           window._lastTotalTabsCount = tabs.length;
           try { localStorage.setItem('notepad_transfer_payload_' + currentDragTid, JSON.stringify(payload)); } catch(e) {}
           saveTransferData(currentDragTid, payload);
-          setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
+          // no opacity change
         };
         
         tabEl.ondragover = (e) => {
@@ -788,7 +789,7 @@
         
         tabEl.ondragend = (e) => {
           if (ghostElement && ghostElement.parentNode) { ghostElement.parentNode.removeChild(ghostElement); ghostElement = null; }
-          document.querySelectorAll('.tab').forEach(el => el.style.opacity = '1'); tabEl.classList.remove('drag-over-left', 'drag-over-right');
+          tabEl.classList.remove('drag-over-left', 'drag-over-right');
           
           const tid = currentDragTid;
           currentDragTid = null;
@@ -804,14 +805,13 @@
                      if (left < 0) left = 0;
                      if (top < 0) top = 0;
 
-                     // ★ ウィンドウ内の全タブが移動対象の場合は、新規ウィンドウ作成ではなく「現ウィンドウの直接位置移動」を実行 ★
+                     // ★ ウィンドウ内の全タブが移動対象の場合は、拡張機能経由で現ウィンドウ位置を直接移動 ★
                      const isAllTabsMoved = (window._lastMovingTabsCount && window._lastMovingTabsCount >= window._lastTotalTabsCount) || tabs.length <= 1;
 
                      if (isAllTabsMoved) {
-                         appLog('ALL tabs in window moved. Repositioning existing window to:', left, top);
+                         appLog('ALL tabs in window moved. Sending MOVE_WINDOW command to Extension:', left, top);
                          try { window.moveTo(left, top); } catch(err) {}
-                         try { window.focus(); } catch(err) {}
-                         window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*');
+                         window.postMessage({ source: 'NOTEPAD_APP', action: 'MOVE_WINDOW', left: left, top: top }, '*');
                      } else {
                          appLog('Partial tabs moved. Detaching into NEW window:', `./index.html?transfer=${tid}`);
                          window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
