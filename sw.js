@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notepad-pwa-v17';
+const CACHE_NAME = 'notepad-pwa-v18';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

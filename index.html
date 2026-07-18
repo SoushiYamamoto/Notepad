@@ -550,13 +550,6 @@
     const bc = new BroadcastChannel('notepad-tabs-channel');
     function focusAllWindows() {
       try { window.focus(); } catch(e) {}
-      if (typeof bc !== 'undefined' && bc) {
-        try { bc.postMessage({ type: 'bring-all-to-front' }); } catch(e) {}
-      }
-      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        try { navigator.serviceWorker.controller.postMessage({ type: 'FOCUS_ALL_WINDOWS' }); } catch(e) {}
-      }
-      // 拡張機能へ通知してOSレベルで全メモ帳ウィンドウを前面へ引き上げる
       try { window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*'); } catch(e) {}
     }
 
@@ -796,18 +789,20 @@
              setTimeout(() => {
                  const isAdopted = localStorage.getItem('sync_adopted_' + tid) === 'true';
                  if (!isAdopted && activeTransfers.has(tid)) {
-                     // ★ ドロップしたマウス位置を中心にウィンドウを開く ★
+                     // ★ ドロップしたマウス位置を中心に新規分離ウィンドウを開く ★
                      let left = e.screenX - 100;
                      let top = e.screenY - 20;
                      if (left < 0) left = 0;
                      if (top < 0) top = 0;
                      window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
+                     
+                     // 新規ドロップウィンドウが一番手前に来るよう、転送ID付きでフォーカス要求を拡張機能へ通知
+                     window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT', newWindowTransferId: tid }, '*');
+                 } else {
+                     window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*');
                  }
                  localStorage.removeItem('sync_adopted_' + tid);
-                 // 移動元ウィンドウおよびすべてのメモ帳ウィンドウを前面に維持するためフォーカスを復帰させる
-                 focusAllWindows();
-                 setTimeout(() => focusAllWindows(), 100);
-             }, 150); // 最短待機で誤動作ゼロへ
+             }, 100);
           }
           
           setTimeout(() => { isDragging = false; }, 100); 
