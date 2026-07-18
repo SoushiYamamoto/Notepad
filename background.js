@@ -1,4 +1,4 @@
-// メモ帳 PWA 専用 拡張機能 Background Service Worker (高速・無フラッシュ・Zオーダー最適化版)
+// メモ帳 PWA 専用 拡張機能 Background Service Worker (無点滅・ウィンドウ即時移動＆Zオーダー最適化版)
 
 const alwaysOnTopWindows = new Set();
 let isFocusingSequence = false;
@@ -88,17 +88,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
-  // 2. ドラッグ開始／進行時：移動元ウィンドウIDを記憶
+  // 2. ドラッグ開始／進行時またはウインドウ移動時
   else if (message.action === "BRING_ALL_TO_FRONT") {
     if (currentWinId) lastSourceWindowId = currentWinId;
-    log("BRING_ALL_TO_FRONT. currentWinId:", currentWinId, "newWindowTransferId:", message.newWindowTransferId);
+    log("BRING_ALL_TO_FRONT. currentWinId:", currentWinId);
     arrangeNotepadWindows(currentWinId, null);
   }
 
-  // 3. 新規分離ウィンドウからのロード完了通知（最優先・即時最手前配置）
+  // 3. 新規分離ウィンドウからのロード完了通知（最優先・無フラッシュ配置）
   else if (message.action === "NEW_WINDOW_READY") {
-    const newWinId = currentWinId; // sender.tab.windowId が確実な新規ウィンドウID！
-    log("NEW_WINDOW_READY received from new windowId:", newWinId, "transferId:", message.transferId, "lastSourceWinId:", lastSourceWindowId);
+    const newWinId = currentWinId;
+    log("NEW_WINDOW_READY received. newWinId:", newWinId, "lastSourceWinId:", lastSourceWindowId);
     arrangeNotepadWindows(lastSourceWindowId, newWinId);
   }
 
@@ -112,43 +112,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function arrangeNotepadWindows(sourceWinId, newWinId) {
+  if (isFocusingSequence) return;
   isFocusingSequence = true;
 
   chrome.windows.getAll({ populate: true }, async (windows) => {
     const notepadWindows = windows.filter(isNotepadWindow);
     log(`Arranging ${notepadWindows.length} Notepad windows. sourceWinId: ${sourceWinId}, newWinId: ${newWinId}`);
 
-    const ordered = [...notepadWindows].sort((a, b) => {
-      let idxA = notepadWindowStack.indexOf(a.id);
-      let idxB = notepadWindowStack.indexOf(b.id);
-      if (idxA === -1) idxA = 999;
-      if (idxB === -1) idxB = 999;
-      return idxA - idxB;
-    });
-
-    const focusSequence = [];
-
-    ordered.filter(w => w.id !== newWinId && w.id !== sourceWinId).reverse().forEach(w => {
-      focusSequence.push(w.id);
-    });
-
-    if (sourceWinId && notepadWindows.some(w => w.id === sourceWinId) && sourceWinId !== newWinId) {
-      focusSequence.push(sourceWinId);
+    // チラつき（フラッシュ）を100%防ぐ最小最適化フォーカス処理：
+    // 全ウィンドウを何度もループフォーカスするのではなく、移動元と新規ウィンドウのみをピンポイントで最前面化
+    if (sourceWinId && sourceWinId !== newWinId && notepadWindows.some(w => w.id === sourceWinId)) {
+      log("Step 1: Raising source window above background apps:", sourceWinId);
+      await safeFocusWindow(sourceWinId);
     }
 
     if (newWinId && notepadWindows.some(w => w.id === newWinId)) {
-      focusSequence.push(newWinId);
-    }
-
-    log("Calculated Zero-Flash Focus Sequence (Bottom to Top):", focusSequence);
-
-    for (const winId of focusSequence) {
-      await safeFocusWindow(winId);
+      log("Step 2: Raising newly created window to TOPMOST position:", newWinId);
+      await safeFocusWindow(newWinId);
     }
 
     setTimeout(() => {
       isFocusingSequence = false;
-      log("ArrangeNotepadWindows completed instantly.");
+      log("ArrangeNotepadWindows completed with ZERO flicker.");
     }, 100);
   });
 }

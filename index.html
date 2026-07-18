@@ -769,7 +769,9 @@
 
           const payload = movingTabs.map(tid => { const t = tabs.find(x => x.id === tid); return { filename: t.filename, content: t.session.getValue(), encoding: t.encoding, isDirty: t.isDirty, handle: t.fileHandle, rawBytes: t.rawBytes }; });
           
-          appLog('ondragstart triggered. transferId:', currentDragTid, 'movingTabs:', movingTabs, 'payload:', payload);
+          appLog('ondragstart triggered. transferId:', currentDragTid, 'movingTabs:', movingTabs, 'totalTabsInWindow:', tabs.length, 'payload:', payload);
+          window._lastMovingTabsCount = movingTabs.length;
+          window._lastTotalTabsCount = tabs.length;
           try { localStorage.setItem('notepad_transfer_payload_' + currentDragTid, JSON.stringify(payload)); } catch(e) {}
           saveTransferData(currentDragTid, payload);
           setTimeout(() => { document.querySelectorAll('.tab.selected, .tab.active').forEach(el => el.style.opacity = '0.5'); }, 0);
@@ -801,11 +803,20 @@
                      let top = e.screenY - 20;
                      if (left < 0) left = 0;
                      if (top < 0) top = 0;
-                     appLog('Tab was NOT adopted by an existing window. Detaching into NEW window:', `./index.html?transfer=${tid}`);
-                     window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
-                     
-                     // 拡張機能へ通知：新規ウィンドウIDと全メモ帳の最前面配置を要求
-                     window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT', newWindowTransferId: tid }, '*');
+
+                     // ★ ウィンドウ内の全タブが移動対象の場合は、新規ウィンドウ作成ではなく「現ウィンドウの直接位置移動」を実行 ★
+                     const isAllTabsMoved = (window._lastMovingTabsCount && window._lastMovingTabsCount >= window._lastTotalTabsCount) || tabs.length <= 1;
+
+                     if (isAllTabsMoved) {
+                         appLog('ALL tabs in window moved. Repositioning existing window to:', left, top);
+                         try { window.moveTo(left, top); } catch(err) {}
+                         try { window.focus(); } catch(err) {}
+                         window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*');
+                     } else {
+                         appLog('Partial tabs moved. Detaching into NEW window:', `./index.html?transfer=${tid}`);
+                         window.open('./index.html?transfer=' + tid, '_blank', `width=800,height=600,left=${left},top=${top},noopener,noreferrer`);
+                         window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT', newWindowTransferId: tid }, '*');
+                     }
                  } else {
                      appLog('Tab was successfully adopted by target window.');
                      window.postMessage({ source: 'NOTEPAD_APP', action: 'BRING_ALL_TO_FRONT' }, '*');
