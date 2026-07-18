@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notepad-pwa-v14';
+const CACHE_NAME = 'notepad-pwa-v15';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -26,6 +26,20 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'FOCUS_ALL_WINDOWS') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        clientList.forEach((client) => {
+          if ('focus' in client) {
+            client.focus();
+          }
+        });
+      })
+    );
+  }
 });
 
 self.addEventListener('fetch', (event) => {
